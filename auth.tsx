@@ -71,12 +71,29 @@ function LoginForm({ blue }: { blue: string }) {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
-  const onSubmit = (data: LoginForm) => {
-    console.log("Login:", data);
-    navigate("/dashboard");
+  const onSubmit = async (data: LoginForm) => {
+    try {
+      const response = await fetch("https://ugotta.space/api/login", {
+        method: "POST",
+        body: JSON.stringify({ username: data.username, password: data.password }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const res = await response.json();
+
+      if (res.error) {
+        setError("username", { message: res.error });
+      } else {
+        localStorage.setItem("userId", String(res.id));
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      setError("username", { message: "Could not reach server. Please try again." });
+    }
   };
 
   return (
@@ -131,16 +148,44 @@ function LoginForm({ blue }: { blue: string }) {
 }
 
 function RegisterForm({ blue }: { blue: string }) {
+  const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [, navigate] = useLocation();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
 
-  const onSubmit = (data: RegisterForm) => {
-    console.log("Register:", data);
+  const onSubmit = async (data: RegisterForm) => {
+    setMessage("");
+
+    const info = {
+      fullname: data.name,
+      username: data.username,
+      email: data.email,
+      password: data.password,
+    };
+
+    try {
+      const response = await fetch("htttps://ugotta.space/api/register", {
+        method: "POST",
+        body: JSON.stringify(info),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const res = await response.json();
+
+      if (res.error) {
+        setMessage(res.error);
+      } else {
+        localStorage.setItem("userId", String(res.id));
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      setMessage("Could not reach server. Please try again.");
+    }
   };
 
   return (
@@ -227,6 +272,7 @@ function RegisterForm({ blue }: { blue: string }) {
       >
         {isSubmitting ? "Creating account…" : "Create Account"}
       </button>
+      {message && <p className="text-center mt-3 text-sm font-bold text-white">{message}</p>}
     </form>
   );
 }
@@ -239,7 +285,6 @@ export default function AuthPage() {
 
       {/* ── LEFT — logo panel with transparent character bg ── */}
       <div className="hidden lg:flex lg:w-3/5 relative items-center justify-center p-12" style={{ backgroundColor: BG }}>
-        {/* Character illustration — very transparent */}
         <div
           className="absolute inset-0"
           style={{
@@ -249,7 +294,6 @@ export default function AuthPage() {
             opacity: 0.2,
           }}
         />
-        {/* Logo on top */}
         <img
           src={logo}
           alt="Ugotta"
