@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Search, Plus, Send, UserPlus, X, Star } from "lucide-react";
+import { Search, Plus, Send, UserPlus, X, Star, LogOut } from "lucide-react";
 import logoIcon from "../assets/logo-icon.png";
+import arrowBg from "../assets/arrow-background.jpg";
+import { useLocation } from "wouter";
 
 const BLUE = "#1149A8";
 const BG = "#F4F3F1";
@@ -30,26 +32,9 @@ const CATEGORY_EMOJI: Record<Category, string> = {
   Music: "🎵",
 };
 
-const INITIAL_RECS: Rec[] = [
-  { id: "1", title: "Interstellar", category: "Movies", rating: 5, notes: "Mind-blowing sci-fi epic. A must watch.", date: "Mar 20" },
-  { id: "2", title: "The Dark Knight", category: "Movies", rating: 5, notes: "Best superhero movie ever made. Ledger is incredible.", date: "Mar 18" },
-  { id: "3", title: "Parasite", category: "Movies", rating: 4, notes: "Incredible storytelling and social commentary.", date: "Mar 15" },
-  { id: "4", title: "Everything Everywhere", category: "Movies", rating: 5, notes: "So creative and emotional. Totally unique film.", date: "Mar 10" },
-  { id: "5", title: "Breaking Bad", category: "TV", rating: 5, notes: "Peak TV. Walter White's transformation is unforgettable.", date: "Mar 19" },
-  { id: "6", title: "Succession", category: "TV", rating: 4, notes: "Great writing, incredible cast. The finale hit hard.", date: "Mar 12" },
-  { id: "7", title: "The Bear", category: "TV", rating: 5, notes: "Intense and brilliant. Watch it now.", date: "Mar 8" },
-  { id: "8", title: "Dark Side of the Moon", category: "Music", rating: 5, notes: "A timeless classic by Pink Floyd. Every track is perfect.", date: "Mar 21" },
-  { id: "9", title: "To Pimp a Butterfly", category: "Music", rating: 5, notes: "Kendrick's masterpiece. Changed the game.", date: "Mar 17" },
-];
+const INITIAL_RECS: Rec[] = [];
 
-const INITIAL_FRIENDS: Friend[] = [
-  { id: "1", username: "evan_j" },
-  { id: "2", username: "kevin_e" },
-  { id: "3", username: "erkan_a" },
-  { id: "4", username: "siddanth_r" },
-  { id: "5", username: "benjamin_q" },
-  { id: "6", username: "logan_e" },
-];
+const INITIAL_FRIENDS: Friend[] = [];
 
 function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
   return (
@@ -91,12 +76,12 @@ function RecCard({ rec, onClick }: { rec: Rec; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 w-44 bg-white rounded-2xl p-4 text-left shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 border border-stone-100"
+      className="flex-shrink-0 w-64 bg-white rounded-2xl p-5 text-left shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 border border-stone-100"
     >
-      <p className="text-base mb-1">{CATEGORY_EMOJI[rec.category]}</p>
-      <h4 className="text-sm font-bold text-stone-900 leading-snug mb-2 line-clamp-2">{rec.title}</h4>
-      <StarRating rating={rec.rating} />
-      <p className="text-xs text-stone-400 mt-2 line-clamp-2 leading-relaxed">{rec.notes}</p>
+      <p className="text-xl mb-1">{CATEGORY_EMOJI[rec.category]}</p>
+      <h4 className="text-base font-bold text-stone-900 leading-snug mb-2 line-clamp-2">{rec.title}</h4>
+      <StarRating rating={rec.rating} size={16} />
+      <p className="text-sm text-stone-400 mt-3 line-clamp-3 leading-relaxed">{rec.notes}</p>
     </button>
   );
 }
@@ -413,6 +398,8 @@ function AddFriendModal({
 }
 
 export default function DashboardPage() {
+  const [, navigate] = useLocation();
+  const username = localStorage.getItem("username") || "user";
   const [recs, setRecs] = useState<Rec[]>(INITIAL_RECS);
   const [friends, setFriends] = useState<Friend[]>(INITIAL_FRIENDS);
   const [search, setSearch] = useState("");
@@ -467,14 +454,17 @@ export default function DashboardPage() {
           <img src={logoIcon} alt="Ugotta" className="h-7 w-7 object-contain" />
           <span className="text-lg font-bold" style={{ color: BLUE }}>Ugotta</span>
         </div>
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
-            style={{ backgroundColor: BLUE }}
-          >
-            U
-          </div>
-          <span className="text-sm font-semibold text-stone-700">your_username</span>
+        <div className="flex items-center gap-3">
+          <span className="text-base font-bold text-stone-700">{username}</span>
+           <button
+            onClick={() => { localStorage.removeItem("userId"); localStorage.removeItem("username"); navigate("/"); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition hover:opacity-80"
+            style={{ color: BLUE, backgroundColor: `${BLUE}12` }}
+            title="Log out"
+         >
+            <LogOut size={15} />
+            Log out
+          </button>
         </div>
       </nav>
 
@@ -482,7 +472,14 @@ export default function DashboardPage() {
       <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
         {/* ── LEFT — Recommendations ── */}
-        <div className="flex-1 bg-white rounded-2xl shadow-sm overflow-y-auto p-6">
+        <div
+          className="flex-1 rounded-2xl shadow-sm overflow-y-auto p-6"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(${arrowBg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
           <h1 className="text-2xl font-bold text-stone-900 mb-7">Your Recommendations:</h1>
 
           {CATEGORIES.map((cat) => {
@@ -495,9 +492,11 @@ export default function DashboardPage() {
                   <span>{cat}:</span>
                 </h2>
                 {catRecs.length === 0 ? (
-                  <p className="text-sm text-stone-400 italic ml-1">
-                    No {cat.toLowerCase()} yet — hit the + to add one!
-                  </p>
+                 <div className="bg-white rounded-2xl px-6 py-5 inline-block shadow-sm border border-stone-100">
+                    <p className="text-base text-stone-400 italic">
+                      No {cat.toLowerCase()} yet — hit the + to add one!
+                    </p>
+                  </div>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {catRecs.map((rec) => (
@@ -542,6 +541,11 @@ export default function DashboardPage() {
             <h3 className="text-sm font-bold text-stone-700 mb-3">Friends List</h3>
 
             <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0">
+              {friends.length === 0 && (
+                <p className="text-sm text-stone-400 italic text-center mt-4 px-2">
+                  :( No friends yet — add one below!
+                </p>
+              )}
               {friends.map((f) => (
                 <div
                   key={f.id}
