@@ -6,18 +6,23 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
-// Place in root of mern app with package.json
+// Routers
+import recRouter from './routes/recommendations.js';
 
 dotenv.config();
 
+// App object
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Database object setup
 const url = 'mongodb+srv://kevin:kevin123@largeprojectcluster.xezylnw.mongodb.net/largeProjectDB?appName=LargeProjectCluster';
 const client = new MongoClient(url);
-const dbName = 'largeProjectDB'
+await client.connect()
+const db = client.db('largeProjectDB')
 
+// Transporter object for email verification
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT, 
@@ -27,10 +32,20 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Log incoming api calls
 app.use((req, res, next) => {
-    console.log('EXPRESS HIT:', req.method, req.url);
+    console.log(req.method, req.url);
     next();
 });
+
+// Add database object to requests
+app.use((req, res, next) => {
+    req.db = db;
+    next();
+});
+
+// Route handler for recommendations
+app.use('/api/recommendations', recRouter)
 
 // Forgot password
 app.post("/api/forgot-pass", async (req, res, next) => {
