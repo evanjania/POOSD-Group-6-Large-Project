@@ -15,6 +15,15 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.blue,
           title: const Text('ugotta mobile'),
         ),
+        body: const Center(
+          child: Column(
+            children: [
+              TextField(),
+              TextField(),
+            ],
+          ),
+          
+        )
       ),
     );
   }
