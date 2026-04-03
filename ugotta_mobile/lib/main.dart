@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
+import 'login.dart';
 
-//landing page for ugotta mobile
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.blue,
-          title: const Text('ugotta mobile'),
-        ),
-      ),
+      debugShowCheckedModeBanner: false,
+      title: 'UGotta Mobile',
+      home: const LoginPage(),
     );
   }
 }
