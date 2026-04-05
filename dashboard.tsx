@@ -327,9 +327,15 @@ function SendRecModal({
 function AddFriendModal({
   onClose,
   onAdd,
+  pendingRequests,
+  onApprove,
+  onDeny,
 }: {
   onClose: () => void;
   onAdd: (username: string) => void;
+  pendingRequests: Friend[];
+  onApprove: (id: string) => void;
+  onDeny: (id: string) => void;
 }) {
   const [username, setUsername] = useState("");
   const [searched, setSearched] = useState(false);
@@ -373,7 +379,7 @@ function AddFriendModal({
         </form>
 
         {searched && username.trim() && (
-          <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: BG }}>
+          <div className="flex items-center justify-between p-4 rounded-xl mb-5" style={{ backgroundColor: BG }}>
             <div className="flex items-center gap-3">
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white"
@@ -392,6 +398,59 @@ function AddFriendModal({
             </button>
           </div>
         )}
+
+        <div className="border-t border-stone-100 pt-5">
+          <h3 className="text-sm font-bold text-stone-700 mb-3">
+            Pending Requests
+            {pendingRequests.length > 0 && (
+              <span
+                className="ml-2 px-2 py-0.5 rounded-full text-xs text-white font-bold"
+                style={{ backgroundColor: BLUE }}
+              >
+                {pendingRequests.length}
+              </span>
+            )}
+          </h3>
+
+          {pendingRequests.length === 0 ? (
+            <p className="text-sm text-stone-400 italic">No pending requests right now.</p>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {pendingRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ backgroundColor: BG }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: BLUE }}
+                    >
+                      {req.username[0].toUpperCase()}
+                    </div>
+                    <span className="text-sm font-semibold text-stone-800">@{req.username}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => onApprove(req.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition hover:opacity-90"
+                      style={{ backgroundColor: BLUE }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onDeny(req.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-stone-500 bg-stone-100 hover:bg-stone-200 transition"
+                    >
+                      Deny
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -402,6 +461,7 @@ export default function DashboardPage() {
   const username = localStorage.getItem("username") || "user";
   const [recs, setRecs] = useState<Rec[]>(INITIAL_RECS);
   const [friends, setFriends] = useState<Friend[]>(INITIAL_FRIENDS);
+  const [pendingRequests, setPendingRequests] = useState<Friend[]>([]);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalType>(null);
   const [selectedRec, setSelectedRec] = useState<Rec | null>(null);
@@ -427,6 +487,23 @@ export default function DashboardPage() {
   const addFriend = (username: string) => {
     if (!username || friends.some((f) => f.username === username)) return;
     setFriends((prev) => [...prev, { id: Date.now().toString(), username }]);
+  };
+
+  const removeFriend = (id: string) => {
+    setFriends((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const approveFriend = (id: string) => {
+    const req = pendingRequests.find((r) => r.id === id);
+    if (!req) return;
+    setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+    if (!friends.some((f) => f.username === req.username)) {
+      setFriends((prev) => [...prev, req]);
+    }
+  };
+
+  const denyFriend = (id: string) => {
+    setPendingRequests((prev) => prev.filter((r) => r.id !== id));
   };
 
   const openDetail = (rec: Rec) => {
@@ -557,7 +634,14 @@ export default function DashboardPage() {
                   >
                     {f.username[0].toUpperCase()}
                   </div>
-                  <span className="text-sm text-stone-700 truncate">@{f.username}</span>
+                  <span className="text-sm text-stone-700 truncate flex-1">@{f.username}</span>
+                  <button
+                    onClick={() => removeFriend(f.id)}
+                    className="text-stone-400 hover:text-red-500 transition text-base leading-none shrink-0"
+                    aria-label={`Remove ${f.username}`}
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
@@ -586,7 +670,13 @@ export default function DashboardPage() {
         <SendRecModal preSelectedRec={sendRec} recs={recs} friends={friends} onClose={closeModal} />
       )}
       {modal === "add-friend" && (
-        <AddFriendModal onClose={closeModal} onAdd={addFriend} />
+        <AddFriendModal
+          onClose={closeModal}
+          onAdd={addFriend}
+          pendingRequests={pendingRequests}
+          onApprove={approveFriend}
+          onDeny={denyFriend}
+        />
       )}
     </div>
   );
