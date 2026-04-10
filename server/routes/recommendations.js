@@ -2,7 +2,10 @@ import express from 'express';
 import { MongoClient, ObjectId } from 'mongodb';
 const router = express.Router();
 
-// Add recommendation
+/* Add recommendation
+Pre: request contains, username, title, category, rating and notes, all as strings
+Post: creates a recommendation with the data passed in request, returns new
+recommendation's id */
 router.post('/add', async (req, res) => {
     try{
         // Parse and validate data from request
@@ -22,9 +25,9 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({error: "This user already has a recommendation for this title and category already"})
         }
 
-        // add result
+        // Add result
         const result = await recsCollection.insertOne({
-            username,
+            username, // Uses username instead of userid because usernames are immutable
             title,
             category,
             rating,
@@ -41,7 +44,10 @@ router.post('/add', async (req, res) => {
     }
 });
 
-// Edit recommendation
+/* Edit recommendation
+Pre: request must contain recommendation id as a string and may
+contain one or more of title, category, rating, and notes as strings
+Post: Updates the fields passed in request, returns updated recommendation json object */
 router.patch('/edit', async (req, res) => {
     try{
         // Parse and validate data from request
@@ -113,4 +119,51 @@ router.patch('/edit', async (req, res) => {
     }
 });
 
+/* Delete recommendation
+Pre: request contains the recommendation id as a string
+Post: the recommendation is deleted from the database */
+router.delete('/delete', async (req, res) => {
+    try{
+        // Get and check rec id
+        const id = req.body.id
+
+        if(!id){
+            return res.status(400).json({error: "Missing recommendation id"});
+        }
+
+        if(!ObjectId.isValid(id)){
+            return res.status(400).json({error: "Invalid recommendation id"});
+        }
+
+        // Create db connection
+        const db = req.db;
+        const recsCollection = db.collection('recommendations');
+
+        // Perform deletion
+        const result = recsCollection.deleteOne({_id: new ObjectId(id)});
+        if(result.deletedCount === 0){
+            return res.status(404).json({error: "Recommendation could not be deleted"});
+        }
+
+        res.status(200).json({message: "Successfully deleted recommendation"});
+    }
+    catch(err){
+        console.error("ERROR DELETING RECOMMENDATION: ", err);
+        res.status(500).json({error: "Server error"});
+    }
+})
+
+/* Search for recommendations
+Pre:
+Post:
+*/
+router.post('/search', (req, res) => {
+    try{
+
+    }
+    catch(err){
+        console.error("ERROR QUERYING RECOMMENDATION: ", err);
+        res.status(500).json({error: "Server error"});
+    }
+})
 export default router;
