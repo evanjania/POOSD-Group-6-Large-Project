@@ -1,10 +1,10 @@
 import express from 'express';
-import { MongoClient, ObjectId } from 'mongodb';
+import {ObjectId} from 'mongodb';
 const router = express.Router();
 
 /* Add recommendation
-Pre: request contains, username, title, category, rating and notes, all as strings
-Post: creates a recommendation with the data passed in request, returns new
+Pre: Request contains, username, title, category, rating and notes, all as strings
+Post: Creates a recommendation with the data passed in request, returns new
 recommendation's id */
 router.post('/add', async (req, res) => {
     try{
@@ -45,7 +45,7 @@ router.post('/add', async (req, res) => {
 });
 
 /* Edit recommendation
-Pre: request must contain recommendation id as a string and may
+Pre: Request must contain recommendation id as a string and may
 contain one or more of title, category, rating, and notes as strings
 Post: Updates the fields passed in request, returns updated recommendation json object */
 router.patch('/edit', async (req, res) => {
@@ -120,8 +120,8 @@ router.patch('/edit', async (req, res) => {
 });
 
 /* Delete recommendation
-Pre: request contains the recommendation id as a string
-Post: the recommendation is deleted from the database */
+Pre: Request contains the recommendation id as a string
+Post: The recommendation is deleted from the database */
 router.delete('/delete', async (req, res) => {
     try{
         // Get and check rec id
@@ -140,7 +140,7 @@ router.delete('/delete', async (req, res) => {
         const recsCollection = db.collection('recommendations');
 
         // Perform deletion
-        const result = recsCollection.deleteOne({_id: new ObjectId(id)});
+        const result = await recsCollection.deleteOne({_id: new ObjectId(id)});
         if(result.deletedCount === 0){
             return res.status(404).json({error: "Recommendation could not be deleted"});
         }
@@ -151,19 +151,29 @@ router.delete('/delete', async (req, res) => {
         console.error("ERROR DELETING RECOMMENDATION: ", err);
         res.status(500).json({error: "Server error"});
     }
-})
+});
 
-/* Search for recommendations
-Pre:
-Post:
-*/
-router.post('/search', (req, res) => {
+/* Search for recommendations of a user
+Pre: User id as a string
+Post: Returns json array of all recommendations. If user has none,
+the array is empty */
+router.get('/search/:username', async (req, res) => {
     try{
+        const username = req.params.username;
 
+        // Create db connection
+        const db = req.db;
+        const recsCollection = db.collection('recommendations');
+
+        // Perform search
+        const results = await recsCollection.find({username}).toArray();
+
+        res.status(200).json(results);
     }
     catch(err){
-        console.error("ERROR QUERYING RECOMMENDATION: ", err);
+        console.error("ERROR SEARCHING FOR USER'S RECOMMENDATIONS: ", err);
         res.status(500).json({error: "Server error"});
     }
-})
+});
+
 export default router;
