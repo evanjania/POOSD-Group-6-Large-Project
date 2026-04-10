@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Send, UserPlus, X, Star, LogOut } from "lucide-react";
 import logoIcon from "../assets/logo-icon.png";
 import arrowBg from "../assets/arrow-background.jpg";
 import { useLocation } from "wouter";
+
+import AddFriendModal, {friendApi} from "../components/friends";
 
 const BLUE = "#1149A8";
 const BG = "#F4F3F1";
@@ -324,144 +326,13 @@ function SendRecModal({
   );
 }
 
-function AddFriendModal({
-  onClose,
-  onAdd,
-  pendingRequests,
-  onApprove,
-  onDeny,
-}: {
-  onClose: () => void;
-  onAdd: (username: string) => void;
-  pendingRequests: Friend[];
-  onApprove: (id: string) => void;
-  onDeny: (id: string) => void;
-}) {
-  const [username, setUsername] = useState("");
-  const [searched, setSearched] = useState(false);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim()) return;
-    setSearched(true);
-  };
-
-  const handleAdd = () => {
-    onAdd(username.trim());
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-4">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition">
-          <X size={20} />
-        </button>
-
-        <h2 className="text-xl font-bold text-stone-900 mb-1">Add a Friend</h2>
-        <p className="text-sm text-stone-400 mb-5">Search by username to connect</p>
-
-        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-          <input
-            value={username}
-            onChange={(e) => { setUsername(e.target.value); setSearched(false); }}
-            placeholder="their_username"
-            className="flex-1 px-4 py-2.5 rounded-xl border border-stone-200 text-sm bg-stone-50 text-stone-800 placeholder-stone-400 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:bg-white transition"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-xl text-white text-sm font-bold transition hover:opacity-90"
-            style={{ backgroundColor: BLUE }}
-          >
-            Search
-          </button>
-        </form>
-
-        {searched && username.trim() && (
-          <div className="flex items-center justify-between p-4 rounded-xl mb-5" style={{ backgroundColor: BG }}>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                style={{ backgroundColor: BLUE }}
-              >
-                {username.trim()[0].toUpperCase()}
-              </div>
-              <span className="text-sm font-semibold text-stone-800">@{username.trim()}</span>
-            </div>
-            <button
-              onClick={handleAdd}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition hover:opacity-90"
-              style={{ backgroundColor: BLUE }}
-            >
-              Add
-            </button>
-          </div>
-        )}
-
-        <div className="border-t border-stone-100 pt-5">
-          <h3 className="text-sm font-bold text-stone-700 mb-3">
-            Pending Requests
-            {pendingRequests.length > 0 && (
-              <span
-                className="ml-2 px-2 py-0.5 rounded-full text-xs text-white font-bold"
-                style={{ backgroundColor: BLUE }}
-              >
-                {pendingRequests.length}
-              </span>
-            )}
-          </h3>
-
-          {pendingRequests.length === 0 ? (
-            <p className="text-sm text-stone-400 italic">No pending requests right now.</p>
-          ) : (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {pendingRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="flex items-center justify-between p-3 rounded-xl"
-                  style={{ backgroundColor: BG }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      style={{ backgroundColor: BLUE }}
-                    >
-                      {req.username[0].toUpperCase()}
-                    </div>
-                    <span className="text-sm font-semibold text-stone-800">@{req.username}</span>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => onApprove(req.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition hover:opacity-90"
-                      style={{ backgroundColor: BLUE }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => onDeny(req.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-stone-500 bg-stone-100 hover:bg-stone-200 transition"
-                    >
-                      Deny
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const [, navigate] = useLocation();
   const username = localStorage.getItem("username") || "user";
   const [recs, setRecs] = useState<Rec[]>(INITIAL_RECS);
   const [friends, setFriends] = useState<Friend[]>(INITIAL_FRIENDS);
-  const [pendingRequests, setPendingRequests] = useState<Friend[]>([]);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalType>(null);
   const [selectedRec, setSelectedRec] = useState<Rec | null>(null);
@@ -484,26 +355,16 @@ export default function DashboardPage() {
     setRecs((prev) => [{ ...rec, id: Date.now().toString(), date: "Today" }, ...prev]);
   };
 
-  const addFriend = (username: string) => {
-    if (!username || friends.some((f) => f.username === username)) return;
-    setFriends((prev) => [...prev, { id: Date.now().toString(), username }]);
-  };
+  const handleSidebarRemove = async (id: string) => {
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId) return;
 
-  const removeFriend = (id: string) => {
     setFriends((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const approveFriend = (id: string) => {
-    const req = pendingRequests.find((r) => r.id === id);
-    if (!req) return;
-    setPendingRequests((prev) => prev.filter((r) => r.id !== id));
-    if (!friends.some((f) => f.username === req.username)) {
-      setFriends((prev) => [...prev, req]);
+    try {
+      await friendApi.remove(currentUserId, id);
+    } catch (error) {
+      console.error(error);
     }
-  };
-
-  const denyFriend = (id: string) => {
-    setPendingRequests((prev) => prev.filter((r) => r.id !== id));
   };
 
   const openDetail = (rec: Rec) => {
@@ -516,11 +377,32 @@ export default function DashboardPage() {
     setModal("send-rec");
   };
 
+  const refreshPendingCount = async () => {
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId) return;
+    try {
+      const requests = await friendApi.getPending(currentUserId);
+      setPendingCount(requests.length);
+    } catch {}
+  };
+
   const closeModal = () => {
+    if (modal === "add-friend") refreshPendingCount();
     setModal(null);
     setSelectedRec(null);
     setSendRec(null);
   };
+
+  useEffect(() => {
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId) return;
+
+    friendApi.getFriends(currentUserId)
+      .then(setFriends)
+      .catch((e) => console.error("Failed to load friends list:", e));
+
+    refreshPendingCount();
+  }, []);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: BG }}>
@@ -636,7 +518,7 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-sm text-stone-700 truncate flex-1">@{f.username}</span>
                   <button
-                    onClick={() => removeFriend(f.id)}
+                    onClick={() => setConfirmRemoveId(f.id)}
                     className="text-stone-400 hover:text-red-500 transition text-base leading-none shrink-0"
                     aria-label={`Remove ${f.username}`}
                   >
@@ -646,16 +528,23 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <button
-              onClick={() => setModal("add-friend")}
-              className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border-2 transition hover:opacity-80"
-              style={{ color: BLUE, borderColor: BLUE }}
-            >
-              <UserPlus size={15} />
-              Add Friend
-            </button>
+            <div className="relative mt-3">
+              <button
+                onClick={() => setModal("add-friend")}
+                className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border-2 transition hover:opacity-80"
+                style={{ color: BLUE, borderColor: BLUE }}
+              >
+                <UserPlus size={15} />
+                Add Friend
+              </button>
+              {pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                  {pendingCount}
+                </span>
+              )}
+            </div>
           </div>
-
+          
         </div>
       </div>
 
@@ -672,12 +561,45 @@ export default function DashboardPage() {
       {modal === "add-friend" && (
         <AddFriendModal
           onClose={closeModal}
-          onAdd={addFriend}
-          pendingRequests={pendingRequests}
-          onApprove={approveFriend}
-          onDeny={denyFriend}
+          friends={friends}
+          setFriends={setFriends}
         />
       )}
+
+      {confirmRemoveId && (() => {
+        const friend = friends.find((f) => f.id === confirmRemoveId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmRemoveId(null)} />
+            <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-xs mx-4 text-center">
+              <p className="text-3xl mb-3">🤔</p>
+              <h2 className="text-lg font-bold text-stone-900 mb-1">Remove friend?</h2>
+              <p className="text-sm text-stone-500 mb-6">
+                Are you sure you want to remove{" "}
+                <span className="font-semibold text-stone-700">@{friend?.username}</span>{" "}
+                from your friends list?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmRemoveId(null)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleSidebarRemove(confirmRemoveId);
+                    setConfirmRemoveId(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
