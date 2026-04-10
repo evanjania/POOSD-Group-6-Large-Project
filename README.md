@@ -8,7 +8,7 @@
 
 | Name | Role | Contact |
 |---|---|---|
-| Evan Jania | PM / Front End | evanjania@gmail.com |
+| Evan Jania | PM / Frontend | evanjania@gmail.com |
 | Logan Elkins | API | loganelkins0101@gmail.com |
 | Kevin Estrada | Database | kevinkevin2796@gmail.com |
 | Siddanth Rajan | Mobile | sid.rajan1323@gmail.com |
@@ -57,7 +57,7 @@ ugotta.space is a MERN stack web application that combines a personal recommenda
 
 ## Project Structure
 
-```
+```text
 ugotta.space/
 ├── client/          # React frontend
 │   ├── public/
@@ -82,7 +82,7 @@ ugotta.space/
 
 A `.env` file is required in the project root. It is not committed to version control. Required variables include:
 
-```
+```bash
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 EMAIL_SERVICE=your_email_provider
@@ -97,7 +97,7 @@ PORT=5000
 
 Once deployed, open a browser and navigate to:
 
-```
+```text
 https://ugotta.space/
 ```
 
