@@ -63,7 +63,14 @@ Future<void> handleLogin() async {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
-      body: Padding(
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('lib/media/bg-characters-B2xRk1Ky.png'),
+            fit: BoxFit.fitHeight,
+            )
+        ),
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -72,6 +79,8 @@ Future<void> handleLogin() async {
               decoration: const InputDecoration(
                 labelText: 'Username',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
             const SizedBox(height: 12),
@@ -81,6 +90,8 @@ Future<void> handleLogin() async {
               decoration: const InputDecoration(
                 labelText: 'Password',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
             const SizedBox(height: 12),
@@ -111,6 +122,7 @@ Future<void> handleLogin() async {
           ],
         ),
       ),
+      )
     );
   }
 }

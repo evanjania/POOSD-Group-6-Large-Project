@@ -61,9 +61,16 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Sign Up')),
-      body: Padding(
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('lib/media/bg-characters-B2xRk1Ky.png'),
+            fit: BoxFit.fitHeight,
+            )
+        ),
+              child: Padding(
         padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
+        
           child: Column(
             children: [
               TextField(
@@ -71,6 +78,8 @@ class _SignupPageState extends State<SignupPage> {
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
                   border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
               ),
               const SizedBox(height: 12),
@@ -79,6 +88,8 @@ class _SignupPageState extends State<SignupPage> {
                 decoration: const InputDecoration(
                   labelText: 'Username',
                   border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
               ),
               const SizedBox(height: 12),
@@ -87,6 +98,8 @@ class _SignupPageState extends State<SignupPage> {
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
               ),
               const SizedBox(height: 12),
@@ -96,6 +109,8 @@ class _SignupPageState extends State<SignupPage> {
                 decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
               ),
               const SizedBox(height: 12),
@@ -116,7 +131,8 @@ class _SignupPageState extends State<SignupPage> {
                     ),
             ],
           ),
-        ),
+        
+      ),
       ),
     );
   }
