@@ -113,7 +113,6 @@ https://ugotta.space/
 - This is a course project and is **not intended for production use** in its current state. Security hardening should be applied before any real-world deployment.
 - Email verification is implemented for account creation, but the email service configuration depends on the environment variables being correctly set.
 - The friends and messaging system is designed for direct one-on-one chats; group messaging is not supported.
-- The application is optimized for desktop browsers; mobile responsiveness may be limited.
 - Recommendation entries are user-generated and rely on manually entered data — there is no external API validation of movie, TV, or music titles.
 
 ---
