@@ -49,7 +49,7 @@ export default function RegisterForm({ blue }: { blue: string }) {
     };
 
     try {
-        const response = await fetch('http://ugotta.space:5000/api/register', {
+        const response = await fetch('/api/register', {
             method: 'POST',
             body: JSON.stringify(info),
             headers: { 'Content-Type': 'application/json' }
@@ -61,6 +61,7 @@ export default function RegisterForm({ blue }: { blue: string }) {
             setMessage(res.error);
         } else {
             localStorage.setItem("userId", String(res.id));
+            localStorage.setItem("username", String(res.username));
             setMessage("Registered Successfully!");
             navigate("/dashboard");
         }
