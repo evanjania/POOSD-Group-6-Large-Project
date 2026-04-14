@@ -91,3 +91,11 @@ coverage/
 *.pem
 .vercel
 .netlify
+
+# =====================
+# Node.js files
+# =====================
+server/node_modules/
+server/package-lock.json
+server/package.json
+server/.env
