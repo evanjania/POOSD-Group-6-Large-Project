@@ -26,7 +26,7 @@ export default function EditPass(){
 
     const onSubmit = async (data: ResetInput) => {
         try{
-            const response = await fetch("/api/reset-pass", {
+            const response = await fetch("/api/auth/reset-pass", {
                 method: "POST",
                 body: JSON.stringify({token: token, newPass: data.password}),
                 headers: {"Content-Type": "application/json"}

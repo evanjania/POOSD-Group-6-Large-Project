@@ -5,7 +5,7 @@ const BLUE = "#1149A8";
 const BG = "#F4F3F1";
 
 // all api logics
-const API_BASE = "/api";
+const API_BASE = "/api/follow";
 
 export const friendApi = {
   search: async (query: string) => {
@@ -15,13 +15,13 @@ export const friendApi = {
   },
 
   getPending: async (userId: string) => {
-    const res = await fetch(`${API_BASE}/follow/pending/${userId}`);
+    const res = await fetch(`${API_BASE}/pending/${userId}`);
     if (!res.ok) throw new Error("Failed to fetch pending");
     return res.json();
   },
 
   request: async (followerId: string, followingId: string) => {
-    const res = await fetch(`${API_BASE}/follow/request`, {
+    const res = await fetch(`${API_BASE}/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ followerId, followingId }),
@@ -31,7 +31,7 @@ export const friendApi = {
   },
 
   approve: async (requestId: string) => {
-    const res = await fetch(`${API_BASE}/follow/approve`, {
+    const res = await fetch(`${API_BASE}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ requestId }),
@@ -41,7 +41,7 @@ export const friendApi = {
   },
 
   deny: async (requestId: string) => {
-    const res = await fetch(`${API_BASE}/follow/deny`, {
+    const res = await fetch(`${API_BASE}/deny`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ requestId }),
@@ -51,7 +51,7 @@ export const friendApi = {
   },
 
   remove: async (currentUserId: string, friendId: string) => {
-    const res = await fetch(`${API_BASE}/follow/remove`, {
+    const res = await fetch(`${API_BASE}/remove`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentUserId, friendId }),
@@ -61,7 +61,7 @@ export const friendApi = {
   },
 
   getFriends: async (userId: string) => {
-    const res = await fetch(`${API_BASE}/follow/friends/${userId}`);
+    const res = await fetch(`${API_BASE}/friends/${userId}`);
     if (!res.ok) throw new Error("Failed to fetch friends");
     return res.json();
   },

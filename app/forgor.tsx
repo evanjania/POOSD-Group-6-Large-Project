@@ -21,7 +21,7 @@ export default function ForgorForm({blue, onBack}: ForgorFormProps){
 
     const onSubmit = async (data: ForgorInput) => {
         try{
-            const response = await fetch("/api/forgot-pass", {
+            const response = await fetch("/api/auth/forgot-pass", {
                 method: "POST",
                 body: JSON.stringify({email: data.email}),
                 headers: {"Content-Type":"application/json"}

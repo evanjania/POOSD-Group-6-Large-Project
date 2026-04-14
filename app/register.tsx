@@ -49,7 +49,7 @@ export default function RegisterForm({ blue }: { blue: string }) {
     };
 
     try {
-        const response = await fetch('/api/register', {
+        const response = await fetch('/api/auth/register', {
             method: 'POST',
             body: JSON.stringify(info),
             headers: { 'Content-Type': 'application/json' }
