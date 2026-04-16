@@ -13,7 +13,7 @@
 | Kevin Estrada | Database | kevinkevin2796@gmail.com |
 | Siddanth Rajan | Mobile | sid.rajan1323@gmail.com |
 | Erkan Altundal | API | erkankerem532@gmail.com |
-| Benjamin Quintero | Mobile | email |
+| Benjamin Quintero | Mobile | bquinteromdc@gmail.com |
 
 ---
 
