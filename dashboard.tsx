@@ -4,12 +4,23 @@ import logoIcon from "../assets/logo-icon.png";
 import arrowBg from "../assets/arrow-background.jpg";
 import { useLocation } from "wouter";
 
-import AddFriendModal, {friendApi} from "../components/friends";
+import AddFriendModal, { friendApi } from "../components/friends";
+import ChatLayer, { messageApi, buildRecMessage, type RecPayload, type ChatMessage } from "../components/chat";
 
+// ── stub for hardcoding to get webpage to build, delete later ──────────────
+/*type Category = "Movies" | "TV" | "Music";
+interface RecPayload { title: string; category: Category; rating: number; notes: string; }
+interface ChatMessage { id: string; senderId: string; content: string; timestamp: string; type: "text" | "rec"; recPayload?: RecPayload; }
+const messageApi = { sendMessage: async (_a: string, _b: string, _c: string) => {} };
+const buildRecMessage = (senderId: string, payload: RecPayload): ChatMessage => ({ id: Date.now().toString(), senderId, content: payload.title, timestamp: new Date().toISOString(), type: "rec", recPayload: payload });
+const ChatLayer = (_props: { friends: unknown[]; openChatIds: string[]; onClose: (id: string) => void; injectMessages: Record<string, ChatMessage | null>; onAddRec: (rec: Omit<Rec, "id" | "date">) => void }) => null;
+*/
+// ── End stub ─────────────────────────────────────────────────────────────────
+
+type Category = "Movies" | "TV" | "Music";
 const BLUE = "#1149A8";
 const BG = "#F4F3F1";
 
-type Category = "Movies" | "TV" | "Music";
 type ModalType = "add-rec" | "rec-detail" | "send-rec" | "add-friend" | null;
 
 interface Rec {
@@ -227,18 +238,33 @@ function SendRecModal({
   recs,
   friends,
   onClose,
+  onSent,
 }: {
   preSelectedRec: Rec | null;
   recs: Rec[];
   friends: Friend[];
   onClose: () => void;
+  onSent: (friendId: string, msg: ChatMessage) => void;
 }) {
   const [selectedRecId, setSelectedRecId] = useState<string | null>(preSelectedRec?.id ?? null);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
-  const handleSend = () => {
-    if (!selectedRecId || !selectedFriendId) return;
+  const handleSend = async () => {
+    if (!selectedFriendId) return;
+    const rec = recs.find((r) => r.id === selectedRecId) ?? preSelectedRec;
+    if (!rec) return;
+
+    const userId = localStorage.getItem("userId") || "";
+    const payload: RecPayload = {
+      title: rec.title,
+      category: rec.category,
+      rating: rec.rating,
+      notes: rec.notes,
+    };
+    const msg = buildRecMessage(userId, selectedFriendId, payload);
+    await messageApi.sendMessage(userId, selectedFriendId, msg.messageText);
+    onSent(selectedFriendId, msg);
     setSent(true);
     setTimeout(onClose, 1500);
   };
@@ -333,6 +359,8 @@ export default function DashboardPage() {
   const [friends, setFriends] = useState<Friend[]>(INITIAL_FRIENDS);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [openChatIds, setOpenChatIds] = useState<string[]>([]);
+  const [injectMessages, setInjectMessages] = useState<Record<string, ChatMessage | null>>({});
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalType>(null);
   const [selectedRec, setSelectedRec] = useState<Rec | null>(null);
@@ -360,11 +388,29 @@ export default function DashboardPage() {
     if (!currentUserId) return;
 
     setFriends((prev) => prev.filter((f) => f.id !== id));
+    closeChat(id);
     try {
       await friendApi.remove(currentUserId, id);
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const toggleChat = (friendId: string) => {
+    setOpenChatIds((prev) =>
+      prev.includes(friendId)
+        ? prev.filter((id) => id !== friendId)
+        : [...prev, friendId]
+    );
+  };
+
+  const closeChat = (friendId: string) => {
+    setOpenChatIds((prev) => prev.filter((id) => id !== friendId));
+  };
+
+  const handleRecSent = (friendId: string, msg: ChatMessage) => {
+    setOpenChatIds((prev) => (prev.includes(friendId) ? prev : [...prev, friendId]));
+    setInjectMessages((prev) => ({ ...prev, [friendId]: msg }));
   };
 
   const openDetail = (rec: Rec) => {
@@ -505,27 +551,37 @@ export default function DashboardPage() {
                   :( No friends yet — add one below!
                 </p>
               )}
-              {friends.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-stone-50 transition cursor-default"
-                >
+              {friends.map((f) => {
+                const isChatOpen = openChatIds.includes(f.id);
+                return (
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{ backgroundColor: BLUE }}
+                    key={f.id}
+                    className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-stone-50 transition cursor-pointer"
+                    onClick={() => toggleChat(f.id)}
+                    title={`Chat with @${f.username}`}
                   >
-                    {f.username[0].toUpperCase()}
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: isChatOpen ? "#0e3d8a" : BLUE }}
+                    >
+                      {f.username[0].toUpperCase()}
+                    </div>
+                    <span
+                      className="text-sm truncate flex-1"
+                      style={{ color: isChatOpen ? BLUE : "#44403c", fontWeight: isChatOpen ? 700 : 400 }}
+                    >
+                      @{f.username}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmRemoveId(f.id); }}
+                      className="text-stone-400 hover:text-red-500 transition text-base leading-none shrink-0"
+                      aria-label={`Remove ${f.username}`}
+                    >
+                      ×
+                    </button>
                   </div>
-                  <span className="text-sm text-stone-700 truncate flex-1">@{f.username}</span>
-                  <button
-                    onClick={() => setConfirmRemoveId(f.id)}
-                    className="text-stone-400 hover:text-red-500 transition text-base leading-none shrink-0"
-                    aria-label={`Remove ${f.username}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="relative mt-3">
@@ -556,7 +612,13 @@ export default function DashboardPage() {
         <RecDetailModal rec={selectedRec} onClose={closeModal} onSend={openSendFromDetail} />
       )}
       {modal === "send-rec" && (
-        <SendRecModal preSelectedRec={sendRec} recs={recs} friends={friends} onClose={closeModal} />
+        <SendRecModal
+          preSelectedRec={sendRec}
+          recs={recs}
+          friends={friends}
+          onClose={closeModal}
+          onSent={handleRecSent}
+        />
       )}
       {modal === "add-friend" && (
         <AddFriendModal
@@ -565,6 +627,15 @@ export default function DashboardPage() {
           setFriends={setFriends}
         />
       )}
+
+      {/* ── CHAT WINDOWS ── */}
+      <ChatLayer
+        friends={friends}
+        openChatIds={openChatIds}
+        onClose={closeChat}
+        injectMessages={injectMessages}
+        onAddRec={(rec: Omit<Rec, "id" | "date">) => addRec(rec)}
+      />
 
       {confirmRemoveId && (() => {
         const friend = friends.find((f) => f.id === confirmRemoveId);
