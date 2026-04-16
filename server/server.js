@@ -3,6 +3,7 @@ import { MongoClient } from 'mongodb';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import http from 'http';
 
@@ -19,18 +20,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create http server with Socket.IO server instance for messaging
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "https://ugotta.space",
-        methods: ["GET", "POST"]
-    }
-});
-
 // Database object setup
-const url = 'mongodb+srv://kevin:kevin123@largeprojectcluster.xezylnw.mongodb.net/largeProjectDB?appName=LargeProjectCluster';
-const client = new MongoClient(url);
+const client = new MongoClient(process.env.MONGO_URI);
 await client.connect()
 const db = client.db('largeProjectDB')
 
@@ -46,10 +37,95 @@ app.use((req, res, next) => {
     next();
 });
 
-// Route handlers
-app.use('/api/recs', recRouter);
-app.use('/api/auth', authRouter);
-app.use('/api/follow', followRouter);
-app.use('/api/messages', messagesRouter);
+// Create http server with Socket.IO server instance for messaging
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "https://ugotta.space",
+        methods: ["GET", "POST"]
+    }
+});
 
-server.listen(5000);
+// Authenticate user
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+
+    if(!token){
+        return next(new Error("Authentication error: No token"));
+    }
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+        if(err){
+            return next(new Error("Authentication error: Invalid token"));
+        }
+
+        socket.user = user;
+        next();
+    });
+});
+
+// Chat Api
+io.on('connection', (socket) => {
+    console.log(`User connected, ${socket.id}`);
+    socket.on('join_chat', (data) => {
+        socket.join(data.roomId);
+        console.log(`User joined room: ${data.roomId}`);
+    });
+
+    socket.on("send_message", async (data) => {
+        const senderId = socket.user.userId;
+        const { receiverId, messageText, type, recPayload } = data;
+        
+        const message = {
+            senderId: new ObjectId(data.senderId),
+            receiverId: new ObjectId(data.receiverId),
+            messageText: messageText,
+            type: type || "text",
+            recPayload: recPayload || null, // Only exists if type is "rec"
+            createdAt: new Date().toISOString(),
+            isRead: false,
+        }
+        
+        try{
+            const result = await db.collection("messages").insertOne(message);
+
+            const messageWithId = { ...message, id: result.insertedId };
+
+            const roomId = [senderId, receiverId].sort().join("_");
+            io.to(roomId).emit("receive_message", messageWithId);
+        }catch(err){
+            console.error("Failed to save message", err);
+        }
+    });
+
+    socket.on("disconnect", () =>{
+        console.log("User disconnected");
+    });
+
+});
+
+// Route handlers
+app.use('/api/auth', authRouter);
+app.use('/api/recs', authenticateToken, recRouter);
+app.use('/api/follow', authenticateToken, followRouter);
+app.use('/api/messages', authenticateToken, messagesRouter);
+
+server.listen(process.env.PORT);
+
+// Middleware for JWS authentication
+function authenticateToken(req, res, next){
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if(token == null) 
+        return res.status(401).json({ error: "No token"});
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+        if(err){
+            console.log("JWT verification error:", err.message);
+            return res.status(403).json({ error: "Invalid token" });
+        }
+
+        req.user = user;
+        next();
+    });
+}

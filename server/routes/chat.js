@@ -1,52 +1,14 @@
 import express from 'express';
 import {ObjectId} from 'mongodb';
+import { Server } from 'socket.io';
+import http from 'http';
 const router = express.Router();
-
-// Chat Api
-io.on('connection', (socket) => {
-    console.log(`User connected', ${socket.id}`);
-    socket.on('join_chat', (data) => {
-        socket.join(data.roomId);
-        console.log(`User joined room: ${data.roomId}`);
-    });
-
-    socket.on("send_message", async (data) => {
-        const { senderId, receiverId, messageText, type, recPayload } = data;
-        
-        const message = {
-            senderId: new ObjectId(data.senderId),
-            receiverId: new ObjectId(data.receiverId),
-            messageText: messageText,
-            type: type || "text",
-            recPayload: recPayload || null, // Only exists if type is "rec"
-            createdAt: new Date().toISOString(),
-            isRead: false,
-        }
-        
-        try{
-            const db = client.db(dbName);
-            const result = await db.collection("messages").insertOne(message);
-
-            const messageWithId = { ...message, id: result.insertedId };
-
-            const roomId = [senderId, receiverId].sort().join("_");
-            io.to(roomId).emit("receive_message", messageWithId);
-        }catch(err){
-            console.error("Failed to save message", err);
-        }
-    });
-
-    socket.on("disconnect", () =>{
-        console.log("User disconnected");
-    });
-
-});
 
 //Load history
 router.get("/:currentUserId/:friendId", async (req, res, next) => {
     try {
         const { currentUserId, friendId } = req.params;
-        const db = client.db(dbName);
+        const db = req.db;
 
         const userA = new ObjectId(currentUserId);
         const userB = new ObjectId(friendId);
@@ -75,7 +37,7 @@ router.get("/:currentUserId/:friendId", async (req, res, next) => {
 router.post("/mark-read", async (req, res) => {
     try {
         const { currentUserId, friendId } = req.body;
-        const db = client.db(dbName);
+        const db = req.db;
 
         await db.collection("messages").updateMany(
             { 

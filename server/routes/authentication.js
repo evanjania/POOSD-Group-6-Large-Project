@@ -1,6 +1,8 @@
 import express from 'express';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import {ObjectId} from 'mongodb';
 const router = express.Router();
 
 // Transporter object for email verification
@@ -11,6 +13,52 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
+});
+
+/* Refresh user access token using refresh token
+Pre: Request contains user's refresh token
+Post: Response contains new access token for user */
+router.post('/refresh', async (req, res) => {
+    const refreshToken = req.body.refreshToken;
+    if(refreshToken == null)
+        return res.status(401).json({ error: "No refresh token" });
+
+    try{
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+        const user = await req.db.collection("users").findOne({
+            _id: new ObjectId(decoded.userId),
+            refreshToken
+        });
+
+        if(!user)
+            return res.status(403).json({ error: "No user found" });
+
+        const newAccessToken = generateAccessToken({ 
+            userId: user._id, 
+            username: user.username 
+        });
+
+        res.json({ accessToken: newAccessToken });
+    }
+    catch(err){
+        console.log("ERROR REFRESHING TOKEN: ", err);
+        res.status(403).json({ error: "Error refreshing token" })
+    }
+});
+
+/* Logout user
+Pre: Request contains user's refresh token
+Post: Removes refresh token from database */
+router.delete('/logout', async (req, res) => {
+    const refreshToken = req.body.refreshToken;
+
+    await req.db.collection("users").updateOne(
+        { refreshToken },
+        { $unset: { refreshToken: "" } }
+    );
+
+    res.status(204).json({ message: "User is successfully logged out" });
 });
 
 // Register API
@@ -47,8 +95,24 @@ router.post('/register', async (req, res, next) =>{
             password
         });
 
+        // Create tokens
+        const accessToken = generateAccessToken({ 
+                userId: result.insertedId, 
+                username: username 
+            });
+
+        const refreshToken = generateRefreshToken({ userId: result.insertedId, });
+
+        // Save refresh token to database
+        await db.collection("users").updateOne(
+            { _id: user._id },
+            { $set: { refreshToken } }
+        );
+
         res.status(201).json({ 
-            message: "Done!", 
+            message: "Done!",
+            accessToken,
+            refreshToken,
             id: result.insertedId, 
             username: username 
         });
@@ -84,7 +148,23 @@ router.post("/login", async (req, res, next) => {
             .json({ error: "Invalid username or password" });
         }
 
+        // Create tokens
+        const accessToken = generateAccessToken({ 
+                userId: user._id, 
+                username: username 
+            });
+
+        const refreshToken = generateRefreshToken({ userId: user._id, });
+
+        // Save refresh token to database
+        await db.collection("users").updateOne(
+            { _id: user._id },
+            { $set: { refreshToken } }
+        );
+
         return res.status(200).json({
+            accessToken,
+            refreshToken,
             id: user._id,
             username: user.username,
             fullname: user.fullname,
@@ -183,5 +263,15 @@ router.post("/reset-pass", async (req, res, next) => {
     }
 
 });
+
+// Returns access token for user with an expiration time
+function generateAccessToken(user){
+    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+}
+
+// Returns refresh token for user, no expiration time
+function generateRefreshToken(user){
+    return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET);
+}
 
 export default router;
