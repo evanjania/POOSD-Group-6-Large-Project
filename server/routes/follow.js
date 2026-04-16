@@ -31,7 +31,8 @@ router.get("/users/search", async (req, res, next ) => {
 // Send a follow request
 router.post('/request', async (req, res, next) =>{
     try{
-        const { followerId, followingId } = req.body;
+        const followerId = req.user.userId;
+        const { followingId } = req.body;
 
         if(!followerId || !followingId)
             return res.status(400).json({error: "Missing user IDs"});
@@ -67,9 +68,9 @@ router.post('/request', async (req, res, next) =>{
 });
 
 // GET pending follow requests for a specific user
-router.get('/pending/:userId', async (req, res, next) => {
+router.get('/pending/', async (req, res, next) => {
     try {
-        const { userId } = req.params;
+        const { userId } = req.user.userId;
         const db = req.db;
 
         // fetch requests and join the users collection to get the sender's username
@@ -165,7 +166,8 @@ router.post('/deny', async (req, res, next) => {
 // Remove a friend
 router.post('/remove', async (req, res, next) => {
     try {
-        const { currentUserId, friendId } = req.body;
+        const currentUserId = req.user.userId;
+        const { friendId } = req.body;
 
         if (!currentUserId || !friendId) {
             return res.status(400).json({ error: "Missing user IDs" });
@@ -189,9 +191,9 @@ router.post('/remove', async (req, res, next) => {
 });
 
 // GET all accepted friends for a user
-router.get('/friends/:userId', async (req, res,next ) => {
+router.get('/friends/', async (req, res,next ) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.userId;
         const db = req.db;
         const userObjId = new ObjectId(userId);
 

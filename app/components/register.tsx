@@ -60,6 +60,9 @@ export default function RegisterForm({ blue }: { blue: string }) {
         if (res.error) {
             setMessage(res.error);
         } else {
+            localStorage.setItem("accessToken", res.accessToken);
+            localStorage.setItem("refreshToken", res.refreshToken);
+
             localStorage.setItem("userId", String(res.id));
             localStorage.setItem("username", String(res.username));
             setMessage("Registered Successfully!");

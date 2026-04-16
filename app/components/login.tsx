@@ -42,6 +42,9 @@ export default function LoginForm({ blue, onForgotClick}: LoginFormProps) {
       if (res.error) {
         setError("username", { message: res.error });
       } else {
+        localStorage.setItem("accessToken", res.accessToken);
+        localStorage.setItem("refreshToken", res.refreshToken);
+
         localStorage.setItem("userId", String(res.id));
 	      localStorage.setItem("username", String(res.username));
         navigate("/dashboard");
