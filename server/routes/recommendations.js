@@ -157,9 +157,9 @@ router.delete('/delete', async (req, res) => {
 Pre: User id as a string
 Post: Returns json array of all recommendations. If user has none,
 the array is empty */
-router.get('/search/:username', async (req, res) => {
+router.get('/search', async (req, res) => {
     try{
-        const username = req.params.username;
+        const username = req.user.username;
 
         // Create db connection
         const db = req.db;
