@@ -6,7 +6,8 @@ import { useLocation } from "wouter";
 
 import AddFriendModal, { friendApi } from "../components/friends";
 import ChatLayer, { messageApi, buildRecMessage, type RecPayload, type ChatMessage } from "../components/chat";
-import AddRecModal, { type NewRec } from "../components/AddRecModal";
+import AddRecModal, { type NewRec } from "../components/AddRec";
+import RecDetailModal from "../components/RecDetail";
 
 // ── stub for hardcoding to get webpage to build, delete later ──────────────
 /*type Category = "Movies" | "TV" | "Music";
@@ -99,59 +100,6 @@ function RecCard({ rec, onClick }: { rec: Rec; onClick: () => void }) {
     </button>
   );
 }
-
-function RecDetailModal({
-  rec,
-  onClose,
-  onSend,
-}: {
-  rec: Rec;
-  onClose: () => void;
-  onSend: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition">
-          <X size={20} />
-        </button>
-
-        <span
-          className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3"
-          style={{ backgroundColor: `${BLUE}18`, color: BLUE }}
-        >
-          {CATEGORY_EMOJI[rec.category]} {rec.category}
-        </span>
-
-        <h2 className="text-2xl font-bold text-stone-900 mb-2">{rec.title}</h2>
-        <StarRating rating={rec.rating} size={18} />
-
-        <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: BG }}>
-          <p className="text-sm text-stone-600 leading-relaxed">{rec.notes}</p>
-        </div>
-
-        <p className="text-xs text-stone-400 mt-3">Added {rec.date}</p>
-
-        <button
-          onClick={onSend}
-          className="mt-5 w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition hover:opacity-90"
-          style={{ backgroundColor: BLUE }}
-        >
-          <Send size={15} />
-          Send to a Friend
-        </button>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-
-
-
 
 
 function SendRecModal({
@@ -301,9 +249,80 @@ export default function DashboardPage() {
   );
 
 
-  const addRec = (rec: Omit<Rec, "id" | "date">) => {
-    setRecs((prev) => [{ ...rec, id: Date.now().toString(), date: "Today" }, ...prev]);
+  const addRec = (rec: Rec) => {
+    setRecs((prev) => [rec, ...prev]);
   };
+
+  // sends updated recommendation to backend and updates dashboard UI
+  const editRec = async (updatedRec: Rec) => {
+	  try {
+
+		  // call backend PATCH route to update recommendation in MongoDB
+		  const response = await fetch("/api/recs/edit", {
+			  method: "PATCH",
+			  headers: {
+				  "Content-Type": "application/json",
+			  },
+
+			  // send updated recommendation fields to server
+			  body: JSON.stringify({
+				  id: updatedRec.id,
+				  title: updatedRec.title,
+				  category: updatedRec.category,
+				  rating: updatedRec.rating,
+				  notes: updatedRec.notes,
+			  }),
+		  });
+
+		  // convert server response to JSON
+		  const data: Rec = await response.json();
+
+		  // if server returns error, stop execution
+		  if (!response.ok) {
+			  console.error(data.error || "Failed to edit recommendation");
+			  return;
+		  }
+
+		  // update recommendation inside dashboard state
+		  // this refreshes the UI immediately after edit succeeds
+      setRecs((prev) =>
+	      prev.map((rec : Rec) =>
+		      rec.id === updatedRec.id ? data : rec
+	      )
+      );
+
+		  // update selectedRec so modal reflects new values immediately
+      setSelectedRec(data);
+
+	  } catch (error) {
+		  console.error("EDIT REC ERROR:", error);
+	  }
+  };
+
+
+  const deleteRec = async (id: string) => {
+    try {
+      const response = await fetch("/api/recs/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to delete recommendation");
+        return;
+      }
+
+      // remove from UI after backend deletion succeeds
+      setRecs((prev) => prev.filter((rec: Rec) => rec.id !== id));
+    } catch (error) {
+      console.error("DELETE REC ERROR:", error);
+    }
+  };
+
+
 
   const handleSidebarRemove = async (id: string) => {
     const currentUserId = localStorage.getItem("userId");
@@ -529,13 +548,26 @@ export default function DashboardPage() {
       {/* ── MODALS ── */}
       
       {modal === "add-rec" && (
-        <AddRecModal onClose={closeModal} onAddSuccess={addRec} />
+        <AddRecModal
+          onClose={closeModal}
+          onAddSuccess={(newRec: Rec) => {
+            setRecs((prev) => [newRec, ...prev]);
+          }}
+        />
       )}
 
 
       {modal === "rec-detail" && selectedRec && (
-        <RecDetailModal rec={selectedRec} onClose={closeModal} onSend={openSendFromDetail} />
+        <RecDetailModal
+          rec={selectedRec}
+          onClose={closeModal}
+          onSend={openSendFromDetail}
+          onDelete={deleteRec}
+          onEdit={editRec}
+        />
       )}
+
+
       {modal === "send-rec" && (
         <SendRecModal
           preSelectedRec={sendRec}
@@ -559,7 +591,14 @@ export default function DashboardPage() {
         openChatIds={openChatIds}
         onClose={closeChat}
         injectMessages={injectMessages}
-        onAddRec={(rec: Omit<Rec, "id" | "date">) => addRec(rec)}
+
+        onAddRec={(rec: Omit<Rec, "id" | "date">) =>
+          setRecs((prev) => [
+            { ...rec, id: Date.now().toString(), date: "Today" },
+            ...prev,
+          ])
+        }
+
       />
 
       {confirmRemoveId && (() => {
