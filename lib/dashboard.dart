@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'services/auth_service.dart';
 import 'services/recommendations_service.dart';
 import 'services/friends_service.dart';
+import 'services/chat_service.dart';
+import 'services/token_service.dart';
 import 'auth_page.dart';
 
 // --- Constants ---
@@ -30,6 +33,14 @@ class _DashboardPageState extends State<DashboardPage> {
   String _recSearchQuery = '';
   final TextEditingController _recSearchController = TextEditingController();
 
+  // ─── Chat state ───────────────────────────────────────────────────────────
+  IO.Socket? _socket;
+  List<Map<String, dynamic>> _messages = [];
+  Map<String, dynamic>? _activeChatFriend;
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  String? _currentUserId;
+
   // Filtered views based on search query
   List<Map<String, dynamic>> get _filteredMovies => _recSearchQuery.isEmpty
       ? _movies
@@ -54,10 +65,15 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _loadRecommendations();
     _loadFriends();
+    _initSocket();
   }
 
   @override
   void dispose() {
+    _socket?.disconnect();
+    _socket?.dispose();
+    _messageController.dispose();
+    _chatScrollController.dispose();
     _recSearchController.dispose();
     super.dispose();
   }
@@ -88,7 +104,257 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) setState(() => _isLoadingFriends = false);
   }
 
-  // ─── Actions ──────────────────────────────────────────────────────────────
+  // ─── Socket.IO ────────────────────────────────────────────────────────────
+  Future<void> _initSocket() async {
+    final token = await TokenService.getAccessToken();
+    _currentUserId = await TokenService.getUserId();
+    if (token == null) return;
+
+    _socket = IO.io('https://ugotta.space', <String, dynamic>{
+      'transports': ['websocket'],
+      'auth': {'token': token},
+    });
+
+    _socket!.on('receive_message', (data) {
+      if (_activeChatFriend != null && mounted) {
+        final msg = Map<String, dynamic>.from(data);
+        setState(() => _messages.add(msg));
+        _scrollToBottom();
+      }
+    });
+  }
+
+  // ─── Chat ─────────────────────────────────────────────────────────────────
+  Future<void> _openChat(Map<String, dynamic> friend) async {
+    setState(() {
+      _activeChatFriend = friend;
+      _messages = [];
+    });
+
+    final friendId = friend['id'].toString();
+
+    // Join socket room
+    final roomId = [_currentUserId, friendId]..sort();
+    _socket?.emit('join_chat', {'roomId': roomId.join('_')});
+
+    // Load history
+    final result = await ChatService.loadHistory(friendId: friendId);
+    if (result['success'] && mounted) {
+      setState(() {
+        _messages = List<Map<String, dynamic>>.from(result['data']);
+      });
+      _scrollToBottom();
+    }
+
+    // Mark as read
+    await ChatService.markAsRead(friendId: friendId);
+
+    // Show chat dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierColor: Colors.black26,
+        builder: (ctx) => _buildChatDialog(friend),
+      ).then((_) {
+        setState(() => _activeChatFriend = null);
+      });
+    }
+  }
+
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty || _activeChatFriend == null) return;
+
+    final friendId = _activeChatFriend!['id'].toString();
+    final roomId = [_currentUserId, friendId]..sort();
+
+    _socket?.emit('send_message', {
+      'senderId': _currentUserId,
+      'receiverId': friendId,
+      'messageText': text,
+      'type': 'text',
+      'roomId': roomId.join('_'),
+    });
+
+    // Optimistically add message to UI
+    setState(() {
+      _messages.add({
+        'senderId': _currentUserId,
+        'messageText': text,
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+    });
+
+    _messageController.clear();
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  // ─── Chat dialog UI ───────────────────────────────────────────────────────
+  Widget _buildChatDialog(Map<String, dynamic> friend) {
+    return StatefulBuilder(
+      builder: (ctx, setDialogState) {
+        // Listen for new messages and rebuild dialog
+        _socket?.off('receive_message');
+        _socket?.on('receive_message', (data) {
+          if (mounted) {
+            final msg = Map<String, dynamic>.from(data);
+            setState(() => _messages.add(msg));
+            setDialogState(() {});
+            _scrollToBottom();
+          }
+        });
+
+        return Dialog(
+          alignment: Alignment.centerLeft,
+          insetPadding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: SizedBox(
+            width: 360,
+            height: 500,
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: kPrimaryBlue,
+                        child: Text(
+                          friend['username'][0].toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text('@${friend['username']}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.black)),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.grey),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                // Messages
+                Expanded(
+                  child: Container(
+                    color: Colors.grey.shade50,
+                    child: _messages.isEmpty
+                        ? Center(
+                            child: Text('No messages yet — say hi!',
+                                style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontStyle: FontStyle.italic)))
+                        : ListView.builder(
+                            controller: _chatScrollController,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _messages.length,
+                            itemBuilder: (ctx, i) {
+                              final msg = _messages[i];
+                              final isMine = msg['senderId'].toString() == _currentUserId;
+                              return Align(
+                                alignment: isMine
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                  constraints: const BoxConstraints(maxWidth: 240),
+                                  decoration: BoxDecoration(
+                                    color: isMine ? kPrimaryBlue : Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 4,
+                                      )
+                                    ],
+                                  ),
+                                  child: Text(
+                                    msg['messageText'] ?? '',
+                                    style: TextStyle(
+                                        color: isMine ? Colors.white : Colors.black87,
+                                        fontSize: 14),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ),
+                // Input bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          style: const TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            hintText: 'Aa',
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none),
+                          ),
+                          onSubmitted: (_) {
+                            _sendMessage();
+                            setDialogState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: kPrimaryBlue),
+                        onPressed: () {
+                          _sendMessage();
+                          setDialogState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
   Future<void> _handleLogout() async {
     await AuthService.logout();
     if (mounted) {
@@ -173,7 +439,7 @@ class _DashboardPageState extends State<DashboardPage> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Theme(
-        data: ThemeData(brightness: Brightness.light, useMaterial3: true, colorSchemeSeed: const Color(0xFF1149A8)),
+        data: ThemeData(brightness: Brightness.light, useMaterial3: true, colorSchemeSeed: const Color(0xFF1149A8), scrollbarTheme: const ScrollbarThemeData(thumbVisibility: WidgetStatePropertyAll(false))),
         child: StatefulBuilder(
           builder: (ctx, setDialogState) => Dialog(
             backgroundColor: Colors.white,
@@ -186,29 +452,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("Add to your diary",
-                                style: TextStyle(
-                                    fontSize: 22, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            const Text("Save something worth recommending",
-                                style: TextStyle(
-                                    color: Colors.grey, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close, color: Colors.grey),
-                      ),
-                    ],
-                  ),
+                  const Text("Add to your diary",
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text("Save something worth recommending",
+                      style: TextStyle(color: Colors.grey, fontSize: 13)),
                   const SizedBox(height: 24),
                   // Title
                   const Text("Title",
@@ -360,7 +608,7 @@ class _DashboardPageState extends State<DashboardPage> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Theme(
-        data: ThemeData(brightness: Brightness.light, useMaterial3: true, colorSchemeSeed: const Color(0xFF1149A8)),
+        data: ThemeData(brightness: Brightness.light, useMaterial3: true, colorSchemeSeed: const Color(0xFF1149A8), scrollbarTheme: const ScrollbarThemeData(thumbVisibility: WidgetStatePropertyAll(false))),
         child: StatefulBuilder(
           builder: (ctx, setDialogState) {
           // Load pending requests once on open
@@ -624,7 +872,7 @@ class _DashboardPageState extends State<DashboardPage> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage('bg-characters.png'),
+                  image: AssetImage('assets/bg-characters.png'),
                   fit: BoxFit.cover,
                   opacity: 0.5,
                 ),
@@ -795,7 +1043,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         friend['username'][0].toUpperCase(),
                         style: const TextStyle(color: Colors.white),
                       )),
-                  title: Text('@${friend['username']}'),
+                  title: Text('@${friend['username']}',
+                      style: const TextStyle(color: Colors.black)),
+                  onTap: () => _openChat(friend),
                   trailing: IconButton(
                     icon: const Icon(Icons.close, size: 16, color: Colors.grey),
                     onPressed: () => _handleRemoveFriend(friend),
@@ -833,7 +1083,7 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           Row(
             children: [
-              Image.asset('logo-icon.png', height: 28),
+              Image.asset('assets/logo-icon.png', height: 28),
               const SizedBox(width: 8),
               const Text("Ugotta",
                   style: TextStyle(

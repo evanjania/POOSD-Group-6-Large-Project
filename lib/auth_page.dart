@@ -163,7 +163,7 @@ class _AuthPageState extends State<AuthPage> {
                 child: ColorFiltered(
                   colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                   child: Image.asset(
-                    'logo-icon.png',
+                    'assets/logo-icon.png',
                     height: 112,
                     fit: BoxFit.contain,
                   ),

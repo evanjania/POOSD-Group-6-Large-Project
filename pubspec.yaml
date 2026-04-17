@@ -22,7 +22,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-assets:
+  assets:
     - assets/bg-characters.png
     - assets/logo.png
     - assets/logo-icon.png
