@@ -80,8 +80,12 @@ POOSD-Group-6-Large-Project/
 │   │   ├── pages/                   # Top-level route pages
 │   │   │   ├── auth.tsx             # Authentication page
 │   │   │   └── dashboard.tsx        # Main user dashboard
-│   │   └── util/
-│   │       └── api.ts               # API helper / axios config
+│   │   ├── util/
+│   │   │   └── api.ts               # API helper / axios config
+│   │   ├── socket.tsx
+│   │   ├── main.tsx
+│   │   ├── index.css
+│   │   └── App.tsx
 │   ├── index.html
 │   ├── vite.config.ts
 │   ├── tsconfig.json
