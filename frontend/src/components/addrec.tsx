@@ -142,7 +142,7 @@ export default function AddRecModal({ onClose, onAddSuccess }: AddRecModalProps)
             //backend returns insertedId as id
             //we store it so later actions like send/delete can use the real DB id
             const newRec: NewRec = {
-                id: String(data.insertedId),
+                id: String(data.id),
                 title: title.trim(),
                 category,
                 rating,

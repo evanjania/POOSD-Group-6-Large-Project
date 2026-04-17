@@ -1,23 +1,14 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, UserPlus, X, Star, LogOut } from "lucide-react";
+import { Search, Plus, UserPlus, Star, LogOut } from "lucide-react";
 import logoIcon from "../assets/logo-icon.png";
 import arrowBg from "../assets/arrow-background.jpg";
 import { useLocation } from "wouter";
 
-import AddFriendModal, { friendApi } from "../src/components/friends";
-import ChatLayer, { messageApi, buildRecMessage, type RecPayload, type ChatMessage } from "../src/components/chat";
-import AddRecModal from "../src/components/addrec";
-//import RecDetailModal from "../components/RecDetail";
-
-// ── stub for hardcoding to get webpage to build, delete later ──────────────
-/*type Category = "Movies" | "TV" | "Music";
-interface RecPayload { title: string; category: Category; rating: number; notes: string; }
-interface ChatMessage { id: string; senderId: string; content: string; timestamp: string; type: "text" | "rec"; recPayload?: RecPayload; }
-const messageApi = { sendMessage: async (_a: string, _b: string, _c: string) => {} };
-const buildRecMessage = (senderId: string, payload: RecPayload): ChatMessage => ({ id: Date.now().toString(), senderId, content: payload.title, timestamp: new Date().toISOString(), type: "rec", recPayload: payload });
-const ChatLayer = (_props: { friends: unknown[]; openChatIds: string[]; onClose: (id: string) => void; injectMessages: Record<string, ChatMessage | null>; onAddRec: (rec: Omit<Rec, "id" | "date">) => void }) => null;
-*/
-// ── End stub ─────────────────────────────────────────────────────────────────
+import AddFriendModal, { friendApi } from "../components/friends";
+import ChatLayer, {type ChatMessage } from "../components/chat";
+import AddRecModal, { recApi } from "../components/addrec";
+import RecDetailModal from "../components/RecDetail";
+import SendRecModal from "../components/sendrec";
 
 type Category = "Movies" | "TV" | "Music";
 const BLUE = "#1149A8";
@@ -32,7 +23,15 @@ interface Rec {
   rating: number;
   notes: string;
   date: string;
-  error: string;
+}
+
+interface RecFromApi {
+  _id: string;
+  title: string;
+  category: Category;
+  rating: number;
+  notes: string;
+  date?: string;
 }
 
 interface Friend {
@@ -80,126 +79,6 @@ function RecCard({ rec, onClick }: { rec: Rec; onClick: () => void }) {
   );
 }
 
-
-function SendRecModal({
-  preSelectedRec,
-  recs,
-  friends,
-  onClose,
-  onSent,
-}: {
-  preSelectedRec: Rec | null;
-  recs: Rec[];
-  friends: Friend[];
-  onClose: () => void;
-  onSent: (friendId: string, msg: ChatMessage) => void;
-}) {
-  const [selectedRecId, setSelectedRecId] = useState<string | null>(preSelectedRec?.id ?? null);
-  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-
-  const handleSend = async () => {
-    if (!selectedFriendId) return;
-    const rec = recs.find((r) => r.id === selectedRecId) ?? preSelectedRec;
-    if (!rec) return;
-
-    const userId = localStorage.getItem("userId") || "";
-    const payload: RecPayload = {
-      title: rec.title,
-      category: rec.category,
-      rating: rec.rating,
-      notes: rec.notes,
-    };
-    const msg = buildRecMessage(userId, selectedFriendId, payload);
-    await messageApi.sendMessage(userId, selectedFriendId, msg.messageText);
-    onSent(selectedFriendId, msg);
-    setSent(true);
-    setTimeout(onClose, 1500);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-4">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition">
-          <X size={20} />
-        </button>
-
-        {sent ? (
-          <div className="text-center py-6">
-            <p className="text-5xl mb-3">🤌</p>
-            <p className="text-lg font-bold text-stone-900">Sent!</p>
-          </div>
-        ) : (
-          <>
-            <h2 className="text-xl font-bold text-stone-900 mb-1">Send a Recommendation</h2>
-            <p className="text-sm text-stone-400 mb-5">Pick a rec and a friend</p>
-
-            {!preSelectedRec && (
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Recommendation</label>
-                <select
-                  value={selectedRecId ?? ""}
-                  onChange={(e) => setSelectedRecId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm bg-stone-50 text-stone-800 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
-                >
-                  <option value="">Select a recommendation...</option>
-                  {recs.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {CATEGORY_EMOJI[r.category]} {r.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {preSelectedRec && (
-              <div
-                className="mb-4 px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2"
-                style={{ backgroundColor: `${BLUE}12`, color: BLUE }}
-              >
-                {CATEGORY_EMOJI[preSelectedRec.category]} {preSelectedRec.title}
-              </div>
-            )}
-
-            <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Send to</label>
-            <div className="space-y-2 max-h-52 overflow-y-auto mb-5">
-              {friends.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setSelectedFriendId(f.id)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition"
-                  style={{
-                    backgroundColor: selectedFriendId === f.id ? `${BLUE}12` : BG,
-                    border: `2px solid ${selectedFriendId === f.id ? BLUE : "transparent"}`,
-                  }}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{ backgroundColor: BLUE }}
-                  >
-                    {f.username[0].toUpperCase()}
-                  </div>
-                  <span className="text-sm font-medium text-stone-800">@{f.username}</span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={handleSend}
-              disabled={!selectedRecId || !selectedFriendId}
-              className="w-full py-3 rounded-xl font-bold text-sm text-white transition hover:opacity-90 disabled:opacity-40"
-              style={{ backgroundColor: BLUE }}
-            >
-              Send Recommendation
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const [, navigate] = useLocation();
   const username = localStorage.getItem("username") || "user";
@@ -227,81 +106,41 @@ export default function DashboardPage() {
     { Movies: [], TV: [], Music: [] }
   );
 
-
-  /*const addRec = (rec: Rec) => {
-    setRecs((prev) => [rec, ...prev]);
-  };*/
-
-  // sends updated recommendation to backend and updates dashboard UI
   const editRec = async (updatedRec: Rec) => {
-	  try {
-
-		  // call backend PATCH route to update recommendation in MongoDB
-		  const response = await fetch("/api/recs/edit", {
-			  method: "PATCH",
-			  headers: {
-				  "Content-Type": "application/json",
-			  },
-
-			  // send updated recommendation fields to server
-			  body: JSON.stringify({
-				  id: updatedRec.id,
-				  title: updatedRec.title,
-				  category: updatedRec.category,
-				  rating: updatedRec.rating,
-				  notes: updatedRec.notes,
-			  }),
-		  });
-
-		  // convert server response to JSON
-		  const data: Rec = await response.json();
-
-		  // if server returns error, stop execution
-		  if (!response.ok) {
-			  console.error(data.error || "Failed to edit recommendation");
-			  return;
-		  }
-
-		  // update recommendation inside dashboard state
-		  // this refreshes the UI immediately after edit succeeds
-      setRecs((prev) =>
-	      prev.map((rec : Rec) =>
-		      rec.id === updatedRec.id ? data : rec
-	      )
-      );
-
-		  // update selectedRec so modal reflects new values immediately
-      setSelectedRec(data);
-
-	  } catch (error) {
-		  console.error("EDIT REC ERROR:", error);
-	  }
+    try {
+      await recApi.edit(updatedRec); 
+      setRecs((prev) => prev.map((rec: Rec) => rec.id === updatedRec.id ? updatedRec : rec));
+      setSelectedRec(updatedRec);
+    } catch (error) {
+      console.error("EDIT REC ERROR:", error);
+    }
   };
-
 
   const deleteRec = async (id: string) => {
     try {
-      const response = await fetch("/api/recs/delete", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id }),
-      });
-
-      if (!response.ok) {
-        console.error("Failed to delete recommendation");
-        return;
-      }
-
-      // remove from UI after backend deletion succeeds
+      await recApi.delete(id);
       setRecs((prev) => prev.filter((rec: Rec) => rec.id !== id));
     } catch (error) {
       console.error("DELETE REC ERROR:", error);
     }
   };
 
-
+  const loadRecommendations = async () => {
+    try {
+      const data = await recApi.search();
+      const formattedRecs: Rec[] = data.map((rec: RecFromApi) => ({
+        id: String(rec._id),
+        title: rec.title,
+        category: rec.category,
+        rating: rec.rating,
+        notes: rec.notes,
+        date: rec.date || "Today",
+      }));
+      setRecs(formattedRecs);
+    } catch (error) {
+      console.error("LOAD RECS ERROR:", error);
+    }
+  };
 
   const handleSidebarRemove = async (id: string) => {
     const currentUserId = localStorage.getItem("userId");
@@ -362,6 +201,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const currentUserId = localStorage.getItem("userId");
     if (!currentUserId) return;
+
+    loadRecommendations();
 
     friendApi.getFriends()
       .then(setFriends)
@@ -526,17 +367,18 @@ export default function DashboardPage() {
 
       {/* ── MODALS ── */}
       
+
       {modal === "add-rec" && (
         <AddRecModal
           onClose={closeModal}
-          onAddSuccess={(newRec: Rec) => {
-            setRecs((prev) => [newRec, ...prev]);
+          onAddSuccess={(_newRec) => {
+            loadRecommendations();
           }}
         />
       )}
 
 
-      {/*{modal === "rec-detail" && selectedRec && (
+      {modal === "rec-detail" && selectedRec && (
         <RecDetailModal
           rec={selectedRec}
           onClose={closeModal}
@@ -544,7 +386,7 @@ export default function DashboardPage() {
           onDelete={deleteRec}
           onEdit={editRec}
         />
-      )}*/}
+      )}
 
 
       {modal === "send-rec" && (
@@ -571,13 +413,30 @@ export default function DashboardPage() {
         onClose={closeChat}
         injectMessages={injectMessages}
 
-        onAddRec={(rec: Omit<Rec, "id" | "date">) =>
-          setRecs((prev) => [
-            { ...rec, id: Date.now().toString(), date: "Today" },
-            ...prev,
-          ])
-        }
+        onAddRec={async (recPayload: any) => {
+          try {
+            const currentUsername = localStorage.getItem("username");
+            if (!currentUsername) return;
 
+            // 1. Tell the backend to permanently save it
+            const data = await recApi.add({
+              username: currentUsername,
+              title: recPayload.title,
+              category: recPayload.category,
+              rating: recPayload.rating,
+              notes: recPayload.notes
+            });
+
+            // 2. Update the Dashboard screen with the real Database ID
+            setRecs((prev) => [
+              { ...recPayload, id: String(data.id), date: "Today" },
+              ...prev,
+            ]);
+          } catch (error) {
+            console.error("Failed to save recommendation from chat:", error);
+            alert("Could not save to library. It might already be there!");
+          }
+        }}
       />
 
       {confirmRemoveId && (() => {

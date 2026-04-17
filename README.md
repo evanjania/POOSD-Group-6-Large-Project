@@ -13,7 +13,7 @@
 | Kevin Estrada | Database | kevinkevin2796@gmail.com |
 | Siddanth Rajan | Mobile | sid.rajan1323@gmail.com |
 | Erkan Altundal | API | erkankerem532@gmail.com |
-| Benjamin Quintero | Mobile | email |
+| Benjamin Quintero | Mobile | bquinteromdc@gmail.com |
 
 ---
 
@@ -58,22 +58,54 @@ ugotta.space is a MERN stack web application that combines a personal recommenda
 ## Project Structure
 
 ```text
-ugotta.space/
-├── client/          # React frontend
-│   ├── public/
-│   └── src/
-│       ├── components/
-│       ├── pages/
-│       └── App.js
-├── server/          # Node.js / Express backend
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   └── index.js
-├── .env             # Environment variables (not committed)
-├── .gitignore
-├── LICENSE
-└── README.md
+POOSD-Group-6-Large-Project/
+├── frontend/                        # React + Vite frontend
+│   ├── public/                      # Static assets served directly
+│   ├── dist/                        # Production build output
+│   ├── src/
+│   │   ├── assets/                  # Images and visual resources
+│   │   │   ├── logo.png
+│   │   │   ├── logo-icon.png
+│   │   │   ├── bg-characters.png
+│   │   │   └── arrow-background.jpg
+│   │   ├── components/              # Reusable UI components
+│   │   │   ├── addrec.tsx           # Add recommendation form
+│   │   │   ├── chat.tsx             # Friend chat interface
+│   │   │   ├── editpass.tsx         # Edit password form
+│   │   │   ├── forgor.tsx           # Forgot password flow
+│   │   │   ├── friends.tsx          # Friends list
+│   │   │   ├── login.tsx            # Login form
+│   │   │   ├── RecDetail.tsx        # Recommendation detail view
+│   │   │   └── register.tsx         # Registration form
+│   │   ├── pages/                   # Top-level route pages
+│   │   │   ├── auth.tsx             # Authentication page
+│   │   │   └── dashboard.tsx        # Main user dashboard
+│   │   ├── util/
+│   │   │   └── api.ts               # API helper / axios config
+│   │   ├── socket.tsx
+│   │   ├── main.tsx
+│   │   ├── index.css
+│   │   └── App.tsx
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── tsconfig.app.json
+│   ├── tsconfig.node.json
+│   ├── eslint.config.js
+│   ├── package.json
+│   └── package-lock.json
+├── server/                          # Node.js / Express backend
+│   ├── routes/                      # API route handlers
+│   │   ├── authentication.js        # Login, signup, email verification
+│   │   ├── chat.js                  # Messaging between friends
+│   │   ├── follow.js                # Friends list management
+│   │   └── recommendations.js       # Diary CRUD operations
+│   ├── server.js                    # Express app entry point
+│   ├── .env                         # Environment variables (not committed)
+│   ├── package.json
+│   └── package-lock.json
+├── package.json
+└── package-lock.json
 ```
 
 ---
