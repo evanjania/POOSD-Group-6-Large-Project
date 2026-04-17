@@ -1,8 +1,11 @@
 import express from 'express';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+dotenv.config();
+
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import http from 'http';
@@ -13,8 +16,6 @@ import authRouter from './routes/authentication.js';
 import followRouter from './routes/follow.js';
 import messagesRouter from './routes/chat.js';
 
-dotenv.config();
-
 // App object
 const app = express();
 app.use(cors());
@@ -22,8 +23,8 @@ app.use(express.json());
 
 // Database object setup
 const client = new MongoClient(process.env.MONGO_URI);
-await client.connect()
-const db = client.db('largeProjectDB')
+await client.connect();
+const db = client.db('largeProjectDB');
 
 // Log incoming api calls
 app.use((req, res, next) => {
@@ -40,6 +41,7 @@ app.use((req, res, next) => {
 // Create http server with Socket.IO server instance for messaging
 const server = http.createServer(app);
 const io = new Server(server, {
+    path: '/api/socket.io',
     cors: {
         origin: "https://ugotta.space",
         methods: ["GET", "POST"]
@@ -67,6 +69,7 @@ io.use((socket, next) => {
 // Chat Api
 io.on('connection', (socket) => {
     console.log(`User connected, ${socket.id}`);
+    
     socket.on('join_chat', (data) => {
         socket.join(data.roomId);
         console.log(`User joined room: ${data.roomId}`);
@@ -77,11 +80,11 @@ io.on('connection', (socket) => {
         const { receiverId, messageText, type, recPayload } = data;
         
         const message = {
-            senderId: new ObjectId(data.senderId),
-            receiverId: new ObjectId(data.receiverId),
+            senderId: new ObjectId(senderId), // Secure fix applied here
+            receiverId: new ObjectId(receiverId), 
             messageText: messageText,
             type: type || "text",
-            recPayload: recPayload || null, // Only exists if type is "rec"
+            recPayload: recPayload || null, //only exists if type is "rec"
             createdAt: new Date().toISOString(),
             isRead: false,
         }

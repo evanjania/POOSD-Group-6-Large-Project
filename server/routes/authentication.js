@@ -5,16 +5,6 @@ import jwt from 'jsonwebtoken';
 import {ObjectId} from 'mongodb';
 const router = express.Router();
 
-// Transporter object for email verification
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT, 
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
 /* Refresh user access token using refresh token
 Pre: Request contains user's refresh token
 Post: Response contains new access token for user */
@@ -105,7 +95,7 @@ router.post('/register', async (req, res, next) =>{
 
         // Save refresh token to database
         await db.collection("users").updateOne(
-            { _id: user._id },
+            { _id: result.insertedId },
             { $set: { refreshToken } }
         );
 
@@ -178,6 +168,7 @@ router.post("/login", async (req, res, next) => {
     }
 });
 
+
 // Forgot password
 router.post("/forgot-pass", async (req, res, next) => {
     try{
@@ -205,8 +196,17 @@ router.post("/forgot-pass", async (req, res, next) => {
             }}
         );
 
-        const resetUrl = `${process.env.CLIENT_URL}/reset-pass/${token}`;
-
+        const resetUrl = `http://localhost:5173/reset-pass/${token}`;
+        // Transporter object for email verification
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT, 
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+        
         await transporter.sendMail({
             from: '"UGotta Team" <no-reply@ugotta.space>',
             to: user.email,

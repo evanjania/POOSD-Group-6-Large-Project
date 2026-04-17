@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { fetchWithAuth } from "../util/api";
 
 import { socket } from "../socket";
 
@@ -52,10 +53,12 @@ const ChatWindow = ({ friend, currentUserId, onClose, injectMsg, onAddRec }: any
 
   useEffect(() => {
     if (!fId) return;
+    socket.auth = {token: localStorage.getItem("accessToken")};
+    socket.connect();
     socket.emit("join_chat", { roomId });
 
     // load history
-    fetch(`/api/messages/${currentUserId}/${friend.id}`)
+    fetchWithAuth(`/api/messages/${currentUserId}/${friend.id}`)
     .then(res => res.json())
     .then(data => setMessages(data));
 
@@ -79,9 +82,8 @@ const ChatWindow = ({ friend, currentUserId, onClose, injectMsg, onAddRec }: any
 
   useEffect(() => {
     const markAsRead = async () => {
-        await fetch(`/api/messages/mark-read`, {
+        await fetchWithAuth(`/api/messages/mark-read`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
                 currentUserId: currentUserId, 
                 friendId: friend.id 
@@ -90,7 +92,7 @@ const ChatWindow = ({ friend, currentUserId, onClose, injectMsg, onAddRec }: any
     };
 
     markAsRead();
-  }, [friend.id, messages.length]); //run again if we switch friends or a new message arrives
+  }, [friend.id]); //run again if we switch friends or a new message arrives
 
   const send = () => {
     if (!input.trim()) return;

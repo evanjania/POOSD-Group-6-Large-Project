@@ -70,7 +70,7 @@ router.post('/request', async (req, res, next) =>{
 // GET pending follow requests for a specific user
 router.get('/pending/', async (req, res, next) => {
     try {
-        const { userId } = req.user.userId;
+        const userId = req.user.userId;
         const db = req.db;
 
         // fetch requests and join the users collection to get the sender's username
