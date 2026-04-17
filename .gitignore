@@ -1,4 +1,44 @@
 # =====================
+# Flutter/Dart/Pub related
+# =====================
+*.class
+*.pyc
+*.swp
+.DS_Store
+.DS_Store?
+._*
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+.metadata/
+migrate_working_dir/
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+app.*.symbols
+app.*.map.json
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# =====================
+# IntelliJ related
+# =====================
+*.iml
+*.ipr
+*.iws
+.idea/
+#.vscode/
+
+# =====================
 # Dependencies
 # =====================
 node_modules/
@@ -56,9 +96,6 @@ pids/
 # =====================
 # OS & System Files
 # =====================
-.DS_Store
-.DS_Store?
-._*
 .Spotlight-V100
 .Trashes
 Thumbs.db
@@ -70,7 +107,6 @@ $RECYCLE.BIN/
 # IDE & Editor Files
 # =====================
 .vscode/
-.idea/
 *.suo
 *.ntvs*
 *.njsproj
@@ -91,4 +127,3 @@ coverage/
 *.pem
 .vercel
 .netlify
-.metadata
