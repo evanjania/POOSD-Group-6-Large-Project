@@ -1,39 +1,38 @@
 import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
 import { X, Loader2 } from "lucide-react";
+import { fetchWithAuth } from "../util/api";
 
 const BLUE = "#1149A8";
 const BG = "#F4F3F1";
 
 // all api logics
-const API_BASE = "/api";
+const API_BASE = "/api/follow";
 
 export const friendApi = {
   search: async (query: string) => {
-    const res = await fetch(`${API_BASE}/users/search?q=${query}`);
+    const res = await fetchWithAuth(`${API_BASE}/users/search?q=${query}`);
     if (!res.ok) throw new Error("Search failed");
     return res.json();
   },
 
-  getPending: async (userId: string) => {
-    const res = await fetch(`${API_BASE}/follow/pending/${userId}`);
+  getPending: async () => {
+    const res = await fetchWithAuth(`${API_BASE}/pending/`);
     if (!res.ok) throw new Error("Failed to fetch pending");
     return res.json();
   },
 
-  request: async (followerId: string, followingId: string) => {
-    const res = await fetch(`${API_BASE}/follow/request`, {
+  request: async (followingId: string) => {
+    const res = await fetchWithAuth(`${API_BASE}/request`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ followerId, followingId }),
+      body: JSON.stringify({ followingId }),
     });
     if (!res.ok) throw new Error("Failed to send request");
     return res.json();
   },
 
   approve: async (requestId: string) => {
-    const res = await fetch(`${API_BASE}/follow/approve`, {
+    const res = await fetchWithAuth(`${API_BASE}/approve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ requestId }),
     });
     if (!res.ok) throw new Error("Failed to approve");
@@ -41,27 +40,25 @@ export const friendApi = {
   },
 
   deny: async (requestId: string) => {
-    const res = await fetch(`${API_BASE}/follow/deny`, {
+    const res = await fetchWithAuth(`${API_BASE}/deny`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ requestId }),
     });
     if (!res.ok) throw new Error("Failed to deny");
     return res.json();
   },
 
-  remove: async (currentUserId: string, friendId: string) => {
-    const res = await fetch(`${API_BASE}/follow/remove`, {
+  remove: async (friendId: string) => {
+    const res = await fetchWithAuth(`${API_BASE}/remove`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentUserId, friendId }),
+      body: JSON.stringify({ friendId }),
     });
     if (!res.ok) throw new Error("Failed to remove friend");
     return res.json();
   },
 
-  getFriends: async (userId: string) => {
-    const res = await fetch(`${API_BASE}/follow/friends/${userId}`);
+  getFriends: async () => {
+    const res = await fetchWithAuth(`${API_BASE}/friends/`);
     if (!res.ok) throw new Error("Failed to fetch friends");
     return res.json();
   },
@@ -118,7 +115,7 @@ export default function AddFriendModal({ onClose, friends, setFriends }: AddFrie
       }
 
       try {
-        const data = await friendApi.getPending(currentUserId);
+        const data = await friendApi.getPending();
         setRequests(data);
       } catch (error) {
         console.error(error);
@@ -162,7 +159,7 @@ export default function AddFriendModal({ onClose, friends, setFriends }: AddFrie
         alert("Must be logged in to do this.");
         return;
       }
-      await friendApi.request(currentUserId, userToFollow._id);
+      await friendApi.request(userToFollow._id);
       onClose();
     } catch (error) {
       console.error(error);
@@ -179,7 +176,7 @@ export default function AddFriendModal({ onClose, friends, setFriends }: AddFrie
       
       setFriends((prev) => prev.filter((f) => f.id !== friendId));
 
-      await friendApi.remove(currentUserId, friendId);
+      await friendApi.remove(friendId);
     } catch (error) {
       console.error(error);
     } finally {
