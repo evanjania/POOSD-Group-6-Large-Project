@@ -10,16 +10,6 @@ import AddRecModal, { recApi } from "../components/addrec";
 import RecDetailModal from "../components/RecDetail";
 import SendRecModal from "../components/sendrec";
 
-// ── stub for hardcoding to get webpage to build, delete later ──────────────
-/*type Category = "Movies" | "TV" | "Music";
-interface RecPayload { title: string; category: Category; rating: number; notes: string; }
-interface ChatMessage { id: string; senderId: string; content: string; timestamp: string; type: "text" | "rec"; recPayload?: RecPayload; }
-const messageApi = { sendMessage: async (_a: string, _b: string, _c: string) => {} };
-const buildRecMessage = (senderId: string, payload: RecPayload): ChatMessage => ({ id: Date.now().toString(), senderId, content: payload.title, timestamp: new Date().toISOString(), type: "rec", recPayload: payload });
-const ChatLayer = (_props: { friends: unknown[]; openChatIds: string[]; onClose: (id: string) => void; injectMessages: Record<string, ChatMessage | null>; onAddRec: (rec: Omit<Rec, "id" | "date">) => void }) => null;
-*/
-// ── End stub ─────────────────────────────────────────────────────────────────
-
 type Category = "Movies" | "TV" | "Music";
 const BLUE = "#1149A8";
 const BG = "#F4F3F1";
