@@ -9,8 +9,9 @@ import bgCharacters from "../assets/bg-characters.png";
 import logoIcon from "../assets/logo-icon.png";
 import logo from "../assets/logo.png";
 
-import RegisterForm from "../components/Register";
+import RegisterForm from "../components/register";
 import LoginForm from "../components/login";
+import ForgorForm from "../components/forgor";
 
 const BG = "#F4F3F1";
 const BLUE = "#1149A8";
@@ -45,7 +46,7 @@ export const inputClass = (hasError?: boolean): string =>
   }`;
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgor">("login");
 
   return (
     <div className="h-screen w-full flex overflow-hidden" style={{ backgroundColor: BG }}>
@@ -90,7 +91,8 @@ export default function AuthPage() {
         <div className="w-full flex flex-col gap-7">
 
           {/* Tab switcher */}
-          <div className="flex rounded-2xl p-1.5 gap-1" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+          {mode !== "forgor" && (
+            <div className="flex rounded-2xl p-1.5 gap-1" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
             <button
               onClick={() => setMode("login")}
               className="flex-1 py-3.5 text-base font-bold rounded-xl transition"
@@ -114,21 +116,26 @@ export default function AuthPage() {
               Sign Up
             </button>
           </div>
+          )}
 
           {/* Heading */}
           <div>
             <h2 className="text-3xl font-bold text-white">
-              {mode === "login" ? "Got something you need to tell your friends about?" : "Tired of forgetting recommendations?"}
+              {mode === "login" && "Got something you need to tell your friends about?"}
+              {mode === "register" && "Tired of forgetting recommendations?"}
+              {mode === "forgor" && "Can't get in?"}
             </h2>
             <p className="text-base mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
-              {mode === "login"
-                ? "Sign in to document it!"
-                : "Sign up and start tracking recommendations together"}
+              {mode === "login" && "Sign in to document it!"}
+              {mode === "register" && "Sign up and start tracking recommendations together"}
+              {mode === "forgor" && "Enter your email to reset your password."}
             </p>
           </div>
 
           {/* Form */}
-          {mode === "login" ? <LoginForm blue={BLUE} /> : <RegisterForm blue={BLUE} />}
+          {mode === "login" && <LoginForm blue={BLUE} onForgotClick={()=>setMode("forgor")}/>} 
+          {mode === "register" && <RegisterForm blue={BLUE} />}
+          {mode === "forgor" && <ForgorForm blue={BLUE} onBack={()=>setMode("login")} />}
 
           {/* Credits */}
           <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.35)" }}>
@@ -140,3 +147,4 @@ export default function AuthPage() {
     </div>
   );
 }
+
