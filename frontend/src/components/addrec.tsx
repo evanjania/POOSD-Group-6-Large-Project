@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { X, Loader2, Star } from "lucide-react"
+import { X, Loader2, Star } from "lucide-react";
+import { fetchWithAuth } from "../util/api";
 
 const BLUE = "#1149A8";
 
@@ -13,6 +14,7 @@ export interface NewRec {
     rating: number;
     notes: string;
     date: string;
+    error: string;
 }
 
 
@@ -116,12 +118,8 @@ export default function AddRecModal({ onClose, onAddSuccess }: AddRecModalProps)
 
             //send recommendation data to backend to recommendations api route
             // POST /api/recs/add
-            const response = await fetch("/api/recs/add", {
+            const response = await fetchWithAuth("/api/recs/add", {
                 method: "POST",
-                headers: {
-                    //tell server we are sending json in the body
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify({
                     username,
                     title: title.trim(), //trims the extra spaces
@@ -144,12 +142,13 @@ export default function AddRecModal({ onClose, onAddSuccess }: AddRecModalProps)
             //backend returns insertedId as id
             //we store it so later actions like send/delete can use the real DB id
             const newRec: NewRec = {
-                id: String(data.insertedId),
+                id: String(data.id),
                 title: title.trim(),
                 category,
                 rating,
                 notes: notes.trim(),
                 date: data.date || "Today",
+                error: "",
             };
 
             //tell the parent dashboard to add this rec to its rec list
@@ -275,5 +274,3 @@ export default function AddRecModal({ onClose, onAddSuccess }: AddRecModalProps)
   );
 
 }//end export AddRecModal
-
-
