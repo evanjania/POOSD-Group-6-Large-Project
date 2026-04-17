@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Send, UserPlus, X, Star, LogOut } from "lucide-react";
+import { Search, Plus, UserPlus, Star, LogOut } from "lucide-react";
 import logoIcon from "../assets/logo-icon.png";
 import arrowBg from "../assets/arrow-background.jpg";
 import { useLocation } from "wouter";
 
 import AddFriendModal, { friendApi } from "../components/friends";
-import ChatLayer, { messageApi, buildRecMessage, type RecPayload, type ChatMessage } from "../components/chat";
+import ChatLayer, {type ChatMessage } from "../components/chat";
+import AddRecModal, { recApi } from "../components/addrec";
+import RecDetailModal from "../components/RecDetail";
+import SendRecModal from "../components/sendrec";
 
 // ── stub for hardcoding to get webpage to build, delete later ──────────────
 /*type Category = "Movies" | "TV" | "Music";
@@ -30,6 +33,15 @@ interface Rec {
   rating: number;
   notes: string;
   date: string;
+}
+
+interface RecFromApi {
+  _id: string;
+  title: string;
+  category: Category;
+  rating: number;
+  notes: string;
+  date?: string;
 }
 
 interface Friend {
@@ -63,28 +75,6 @@ function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
   );
 }
 
-function StarInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const [hover, setHover] = useState(0);
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <button
-          key={s}
-          type="button"
-          onClick={() => onChange(s)}
-          onMouseEnter={() => setHover(s)}
-          onMouseLeave={() => setHover(0)}
-        >
-          <Star
-            size={26}
-            className={(hover || value) >= s ? "fill-yellow-400 text-yellow-400" : "text-stone-300"}
-          />
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function RecCard({ rec, onClick }: { rec: Rec; onClick: () => void }) {
   return (
     <button
@@ -96,259 +86,6 @@ function RecCard({ rec, onClick }: { rec: Rec; onClick: () => void }) {
       <StarRating rating={rec.rating} size={16} />
       <p className="text-sm text-stone-400 mt-3 line-clamp-3 leading-relaxed">{rec.notes}</p>
     </button>
-  );
-}
-
-function RecDetailModal({
-  rec,
-  onClose,
-  onSend,
-}: {
-  rec: Rec;
-  onClose: () => void;
-  onSend: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition">
-          <X size={20} />
-        </button>
-
-        <span
-          className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3"
-          style={{ backgroundColor: `${BLUE}18`, color: BLUE }}
-        >
-          {CATEGORY_EMOJI[rec.category]} {rec.category}
-        </span>
-
-        <h2 className="text-2xl font-bold text-stone-900 mb-2">{rec.title}</h2>
-        <StarRating rating={rec.rating} size={18} />
-
-        <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: BG }}>
-          <p className="text-sm text-stone-600 leading-relaxed">{rec.notes}</p>
-        </div>
-
-        <p className="text-xs text-stone-400 mt-3">Added {rec.date}</p>
-
-        <button
-          onClick={onSend}
-          className="mt-5 w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition hover:opacity-90"
-          style={{ backgroundColor: BLUE }}
-        >
-          <Send size={15} />
-          Send to a Friend
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function AddRecModal({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void;
-  onAdd: (rec: Omit<Rec, "id" | "date">) => void;
-}) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<Category>("Movies");
-  const [rating, setRating] = useState(0);
-  const [notes, setNotes] = useState("");
-
-  const fieldClass =
-    "w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm bg-stone-50 text-stone-800 placeholder-stone-400 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:bg-white transition";
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || rating === 0) return;
-    onAdd({ title: title.trim(), category, rating, notes: notes.trim() });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition">
-          <X size={20} />
-        </button>
-
-        <h2 className="text-xl font-bold text-stone-900 mb-1">Add to your diary</h2>
-        <p className="text-sm text-stone-400 mb-6">Save something worth recommending</p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1.5">Title</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What are you recommending?"
-              className={fieldClass}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1.5">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as Category)}
-              className={fieldClass}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {CATEGORY_EMOJI[c]} {c}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-2">Rating</label>
-            <StarInput value={rating} onChange={setRating} />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1.5">Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Why should your friends check this out?"
-              className={fieldClass + " resize-none h-24"}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 rounded-xl font-bold text-sm text-white transition hover:opacity-90 mt-1"
-            style={{ backgroundColor: BLUE }}
-          >
-            Add to Diary
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function SendRecModal({
-  preSelectedRec,
-  recs,
-  friends,
-  onClose,
-  onSent,
-}: {
-  preSelectedRec: Rec | null;
-  recs: Rec[];
-  friends: Friend[];
-  onClose: () => void;
-  onSent: (friendId: string, msg: ChatMessage) => void;
-}) {
-  const [selectedRecId, setSelectedRecId] = useState<string | null>(preSelectedRec?.id ?? null);
-  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-
-  const handleSend = async () => {
-    if (!selectedFriendId) return;
-    const rec = recs.find((r) => r.id === selectedRecId) ?? preSelectedRec;
-    if (!rec) return;
-
-    const userId = localStorage.getItem("userId") || "";
-    const payload: RecPayload = {
-      title: rec.title,
-      category: rec.category,
-      rating: rec.rating,
-      notes: rec.notes,
-    };
-    const msg = buildRecMessage(userId, selectedFriendId, payload);
-    await messageApi.sendMessage(userId, selectedFriendId, msg.messageText);
-    onSent(selectedFriendId, msg);
-    setSent(true);
-    setTimeout(onClose, 1500);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-4">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition">
-          <X size={20} />
-        </button>
-
-        {sent ? (
-          <div className="text-center py-6">
-            <p className="text-5xl mb-3">🤌</p>
-            <p className="text-lg font-bold text-stone-900">Sent!</p>
-          </div>
-        ) : (
-          <>
-            <h2 className="text-xl font-bold text-stone-900 mb-1">Send a Recommendation</h2>
-            <p className="text-sm text-stone-400 mb-5">Pick a rec and a friend</p>
-
-            {!preSelectedRec && (
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Recommendation</label>
-                <select
-                  value={selectedRecId ?? ""}
-                  onChange={(e) => setSelectedRecId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm bg-stone-50 text-stone-800 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
-                >
-                  <option value="">Select a recommendation...</option>
-                  {recs.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {CATEGORY_EMOJI[r.category]} {r.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {preSelectedRec && (
-              <div
-                className="mb-4 px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2"
-                style={{ backgroundColor: `${BLUE}12`, color: BLUE }}
-              >
-                {CATEGORY_EMOJI[preSelectedRec.category]} {preSelectedRec.title}
-              </div>
-            )}
-
-            <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Send to</label>
-            <div className="space-y-2 max-h-52 overflow-y-auto mb-5">
-              {friends.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setSelectedFriendId(f.id)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition"
-                  style={{
-                    backgroundColor: selectedFriendId === f.id ? `${BLUE}12` : BG,
-                    border: `2px solid ${selectedFriendId === f.id ? BLUE : "transparent"}`,
-                  }}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{ backgroundColor: BLUE }}
-                  >
-                    {f.username[0].toUpperCase()}
-                  </div>
-                  <span className="text-sm font-medium text-stone-800">@{f.username}</span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={handleSend}
-              disabled={!selectedRecId || !selectedFriendId}
-              className="w-full py-3 rounded-xl font-bold text-sm text-white transition hover:opacity-90 disabled:opacity-40"
-              style={{ backgroundColor: BLUE }}
-            >
-              Send Recommendation
-            </button>
-          </>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -379,8 +116,40 @@ export default function DashboardPage() {
     { Movies: [], TV: [], Music: [] }
   );
 
-  const addRec = (rec: Omit<Rec, "id" | "date">) => {
-    setRecs((prev) => [{ ...rec, id: Date.now().toString(), date: "Today" }, ...prev]);
+  const editRec = async (updatedRec: Rec) => {
+    try {
+      await recApi.edit(updatedRec); 
+      setRecs((prev) => prev.map((rec: Rec) => rec.id === updatedRec.id ? updatedRec : rec));
+      setSelectedRec(updatedRec);
+    } catch (error) {
+      console.error("EDIT REC ERROR:", error);
+    }
+  };
+
+  const deleteRec = async (id: string) => {
+    try {
+      await recApi.delete(id);
+      setRecs((prev) => prev.filter((rec: Rec) => rec.id !== id));
+    } catch (error) {
+      console.error("DELETE REC ERROR:", error);
+    }
+  };
+
+  const loadRecommendations = async () => {
+    try {
+      const data = await recApi.search();
+      const formattedRecs: Rec[] = data.map((rec: RecFromApi) => ({
+        id: String(rec._id),
+        title: rec.title,
+        category: rec.category,
+        rating: rec.rating,
+        notes: rec.notes,
+        date: rec.date || "Today",
+      }));
+      setRecs(formattedRecs);
+    } catch (error) {
+      console.error("LOAD RECS ERROR:", error);
+    }
   };
 
   const handleSidebarRemove = async (id: string) => {
@@ -390,7 +159,7 @@ export default function DashboardPage() {
     setFriends((prev) => prev.filter((f) => f.id !== id));
     closeChat(id);
     try {
-      await friendApi.remove(currentUserId, id);
+      await friendApi.remove(id);
     } catch (error) {
       console.error(error);
     }
@@ -427,7 +196,7 @@ export default function DashboardPage() {
     const currentUserId = localStorage.getItem("userId");
     if (!currentUserId) return;
     try {
-      const requests = await friendApi.getPending(currentUserId);
+      const requests = await friendApi.getPending();
       setPendingCount(requests.length);
     } catch {}
   };
@@ -443,7 +212,9 @@ export default function DashboardPage() {
     const currentUserId = localStorage.getItem("userId");
     if (!currentUserId) return;
 
-    friendApi.getFriends(currentUserId)
+    loadRecommendations();
+
+    friendApi.getFriends()
       .then(setFriends)
       .catch((e) => console.error("Failed to load friends list:", e));
 
@@ -605,12 +376,29 @@ export default function DashboardPage() {
       </div>
 
       {/* ── MODALS ── */}
+      
+
       {modal === "add-rec" && (
-        <AddRecModal onClose={closeModal} onAdd={addRec} />
+        <AddRecModal
+          onClose={closeModal}
+          onAddSuccess={(_newRec) => {
+            loadRecommendations();
+          }}
+        />
       )}
+
+
       {modal === "rec-detail" && selectedRec && (
-        <RecDetailModal rec={selectedRec} onClose={closeModal} onSend={openSendFromDetail} />
+        <RecDetailModal
+          rec={selectedRec}
+          onClose={closeModal}
+          onSend={openSendFromDetail}
+          onDelete={deleteRec}
+          onEdit={editRec}
+        />
       )}
+
+
       {modal === "send-rec" && (
         <SendRecModal
           preSelectedRec={sendRec}
@@ -634,7 +422,31 @@ export default function DashboardPage() {
         openChatIds={openChatIds}
         onClose={closeChat}
         injectMessages={injectMessages}
-        onAddRec={(rec: Omit<Rec, "id" | "date">) => addRec(rec)}
+
+        onAddRec={async (recPayload: any) => {
+          try {
+            const currentUsername = localStorage.getItem("username");
+            if (!currentUsername) return;
+
+            // 1. Tell the backend to permanently save it
+            const data = await recApi.add({
+              username: currentUsername,
+              title: recPayload.title,
+              category: recPayload.category,
+              rating: recPayload.rating,
+              notes: recPayload.notes
+            });
+
+            // 2. Update the Dashboard screen with the real Database ID
+            setRecs((prev) => [
+              { ...recPayload, id: String(data.id), date: "Today" },
+              ...prev,
+            ]);
+          } catch (error) {
+            console.error("Failed to save recommendation from chat:", error);
+            alert("Could not save to library. It might already be there!");
+          }
+        }}
       />
 
       {confirmRemoveId && (() => {
