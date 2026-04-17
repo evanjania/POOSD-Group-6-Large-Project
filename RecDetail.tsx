@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from "react";
 
 // icons used in the modal UI
-import { X, Send, Loader2 } from "lucide-react";
+import { X, Send} from "lucide-react";
 
 // color constants used for styling buttons and labels
 const BLUE = "#1149A8";
@@ -178,8 +178,7 @@ export default function RecDetailModal(
 	};
 
 
-	return
-	(
+	return(
 		<div className="fixed inset-0 z-50 flex items-center justify-center">
 
 			{/* background overlay closes modal when clicked */}
