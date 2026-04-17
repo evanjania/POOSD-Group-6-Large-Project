@@ -4,9 +4,9 @@ import logoIcon from "../assets/logo-icon.png";
 import arrowBg from "../assets/arrow-background.jpg";
 import { useLocation } from "wouter";
 
-import AddFriendModal, { friendApi } from "../components/friends";
-import ChatLayer, { messageApi, buildRecMessage, type RecPayload, type ChatMessage } from "../components/chat";
-import AddRecModal from "../components/addrec";
+import AddFriendModal, { friendApi } from "../src/components/friends";
+import ChatLayer, { messageApi, buildRecMessage, type RecPayload, type ChatMessage } from "../src/components/chat";
+import AddRecModal from "../src/components/addrec";
 //import RecDetailModal from "../components/RecDetail";
 
 // ── stub for hardcoding to get webpage to build, delete later ──────────────
