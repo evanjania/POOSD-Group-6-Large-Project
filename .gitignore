@@ -96,6 +96,9 @@ pids/
 # =====================
 # OS & System Files
 # =====================
+.DS_Store
+.DS_Store?
+._*
 .Spotlight-V100
 .Trashes
 Thumbs.db
@@ -107,6 +110,7 @@ $RECYCLE.BIN/
 # IDE & Editor Files
 # =====================
 .vscode/
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
@@ -127,3 +131,11 @@ coverage/
 *.pem
 .vercel
 .netlify
+
+# =====================
+# Node.js files
+# =====================
+server/node_modules/
+server/package-lock.json
+server/package.json
+server/.env
