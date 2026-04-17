@@ -91,3 +91,4 @@ coverage/
 *.pem
 .vercel
 .netlify
+.metadata
